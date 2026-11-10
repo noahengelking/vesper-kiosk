@@ -131,12 +131,6 @@ button{font:inherit;color:var(--fg);background:none;border:0;cursor:pointer}
 .ctl button.sm.on{color:var(--acc)}
 .ctl button.sm svg{width:3.4vh;height:3.4vh;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 #one{display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:1.3vh}
-.mright{position:absolute;right:.5vw;top:50%;transform:translateY(-50%);height:72%;width:7.5vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1vh;z-index:4}
-.vlab{font-size:2vh;color:var(--dim)}
-.vbar{flex:1;min-height:0;width:100%;display:flex;justify-content:center;touch-action:none;cursor:pointer;padding:1.8vh 0}
-.vtrack{width:1.8vh;height:100%;background:var(--line);position:relative;border-radius:1vh}
-.vfill{position:absolute;left:0;right:0;bottom:0;height:0;background:var(--acc);border-radius:1vh}
-.vthumb{position:absolute;left:50%;bottom:0;width:3.2vh;height:3.2vh;border-radius:50%;background:var(--fg);transform:translate(-50%,50%)}
 
 /* settings sheet */
 #edge{position:fixed;top:0;left:0;right:0;height:4vh;z-index:20;touch-action:none}
@@ -192,8 +186,6 @@ button{font:inherit;color:var(--fg);background:none;border:0;cursor:pointer}
   radial-gradient(circle at 92% 88%, rgba(var(--alb2),.22), transparent 48%),
   var(--bg)}
 #spotifyTile>*{position:relative;z-index:1}
-#spotifyTile .mright> *{transition:opacity .45s ease}
-#spotifyTile .mright.idle> *{opacity:0}
 #timerBadge{font-size:1.55vh;letter-spacing:.12em;text-transform:uppercase;color:var(--acc);display:none}
 #timerBadge.on{display:block}
 .dayribbon{display:none;position:fixed;top:0;left:0;right:0;height:1.7vh;z-index:12;pointer-events:none;background:transparent}
@@ -233,9 +225,6 @@ body.ribbon-on .dayribbon{display:block}
 .lyrics-progress-thumb{position:absolute;top:50%;left:0;width:1.8vh;height:1.8vh;border-radius:50%;background:var(--fg);transform:translate(-50%,-50%);opacity:0;transition:opacity .18s;box-shadow:0 0 0 .25vh var(--bg)}
 #lyricsScreen.seeking .lyrics-progress-thumb{opacity:1}
 .lyrics-time{position:absolute;top:2.2vh;right:10vw;font-size:1.55vh;color:var(--dim);font-variant-numeric:tabular-nums;z-index:3}
-.lyrics-volume{position:absolute;right:2.8vw;top:50%;transform:translateY(-50%);width:1.4vh;height:30vh;border-radius:1vh;background:rgba(125,123,118,.18);overflow:hidden;opacity:0;transition:opacity .25s;z-index:3}
-.lyrics-volume.on{opacity:1}
-.lyrics-volume-fill{position:absolute;left:0;right:0;bottom:0;height:0;background:var(--acc);border-radius:1vh}
 #lyricsScreen .lyr-head{display:flex;align-items:flex-end;gap:2vw;margin-bottom:3vh;flex:none}
 #lyricsScreen .lyr-art{width:13vh;height:13vh;border-radius:1.5vh;object-fit:cover;background:var(--line)}
 #lyricsScreen .lyr-meta{min-width:0;flex:1}
@@ -267,6 +256,13 @@ body.ribbon-on .dayribbon{display:block}
 #idleWeather{font-size:1.9vh;color:var(--acc);margin-top:4vh}
 #toast{position:fixed;left:50%;bottom:4vh;transform:translateX(-50%) translateY(2vh);z-index:75;padding:1.1vh 2.4vh;border-radius:3vh;background:var(--bg);border:1px solid var(--line);color:var(--fg);font-size:2vh;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:80vw;text-align:center}
 #toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.volume-pill{position:fixed;left:50%;bottom:4vh;transform:translate(-50%,2vh);z-index:58;display:flex;align-items:center;gap:1.5vw;width:46vw;min-width:34vw;max-width:72vw;padding:1.15vh 1.8vw;border:1px solid var(--line);border-radius:10vh;background:var(--bg);box-shadow:0 1.2vh 4vh rgba(0,0,0,.35);opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease}
+.volume-pill.on{opacity:1;transform:translate(-50%,0)}
+.volume-pill .vp-title{font-size:1.5vh;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);white-space:nowrap}
+.volume-pill .vp-track{position:relative;flex:1;height:1.8vh;border-radius:1vh;background:var(--line);overflow:visible}
+.volume-pill .vp-fill{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:1vh;background:var(--acc);will-change:width}
+.volume-pill .vp-thumb{position:absolute;top:50%;left:0;width:3vh;height:3vh;border-radius:50%;background:var(--fg);transform:translate(-50%,-50%);box-shadow:0 0 0 .2vh var(--bg)}
+.volume-pill .vp-val{font-size:1.8vh;color:var(--fg);min-width:4vh;text-align:right;font-variant-numeric:tabular-nums}
 
 /* ---------- settings pages and new controls ---------- */
 .setpage[hidden]{display:none!important}
@@ -354,10 +350,6 @@ html[data-daynight=night] #spotifyTile.ambient{filter:saturate(.82) brightness(.
           <button id="next" aria-label="Next"><svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM6 18V6l8.5 6z"/></svg></button>
           <button id="rep" class="sm" aria-label="Repeat"><svg viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg><span id="one">1</span></button>
         </div>
-      </div>
-      <div class="mright idle">
-        <div class="vlab" id="vlab">0</div>
-        <div class="vbar" id="vbar"><div class="vtrack" id="vtrack"><div class="vfill" id="vfill"></div><div class="vthumb" id="vthumb"></div></div></div>
       </div>
     </div>
   </section>
@@ -492,7 +484,6 @@ html[data-daynight=night] #spotifyTile.ambient{filter:saturate(.82) brightness(.
 <div id="lyricsScreen" class="vscreen">
   <div class="lyrics-progress" id="lyricsProgress"><div class="lyrics-progress-fill" id="lyricsProgressFill"></div><div class="lyrics-progress-thumb" id="lyricsProgressThumb"></div></div>
   <div class="lyrics-time" id="lyricsTime">0:00 / 0:00</div>
-  <div class="lyrics-volume" id="lyricsVolume"><div class="lyrics-volume-fill" id="lyricsVolumeFill"></div></div>
   <button class="vx" id="lyricsClose">×</button>
   <div class="lyr-head">
     <img class="lyr-art" id="lyrArt" alt="">
@@ -538,6 +529,11 @@ html[data-daynight=night] #spotifyTile.ambient{filter:saturate(.82) brightness(.
   <div id="idleClock">--:--</div>
   <div id="idleDate"></div>
   <div id="idleWeather"></div>
+</div>
+<div id="volumePill" class="volume-pill">
+  <div class="vp-title">Spotify volume</div>
+  <div class="vp-track" id="vpTrack"><div class="vp-fill" id="vpFill"></div><div class="vp-thumb" id="vpThumb"></div></div>
+  <div class="vp-val" id="vpVal">0</div>
 </div>
 <div id="toast"></div>
 
@@ -995,7 +991,22 @@ function paintLyricsProgress(f, ms) {
 }
 function paintProgress(f, ms) { paintMainProgress(f, ms); paintLyricsProgress(f, ms); }
 function setProg(f) { paintProgress(f, st && st.state === 'ok' ? f * st.duration : 0); }
-function setVol(p) { $('vfill').style.height = p + '%'; $('vthumb').style.bottom = p + '%'; $('vlab').textContent = Math.round(p); }
+let volumeFraction = 0, volumePillTimer = 0;
+function setVol(p) {
+  p = Math.max(0, Math.min(100, Number(p) || 0));
+  volumeFraction = p / 100;
+  if ($('vpFill')) $('vpFill').style.width = p + '%';
+  if ($('vpThumb')) $('vpThumb').style.left = p + '%';
+  if ($('vpVal')) $('vpVal').textContent = Math.round(p);
+}
+function showVolumePill(pct) {
+  setVol(pct);
+  const e = $('volumePill');
+  if (!e) return;
+  e.classList.add('on');
+  clearTimeout(volumePillTimer);
+  volumePillTimer = setTimeout(() => e.classList.remove('on'), 2200);
+}
 function slider(hit, track, vertical, onMove, onEnd) {
   let on = false;
   const f = e => {
@@ -1117,9 +1128,6 @@ slider($('pbar'), $('ptrack'), false,
       act('seek', '?ms=' + ms, 1200);
     }
   });
-slider($('vbar'), $('vtrack'), true,
-  f => { vdrag = true; setVol(f * 100); },
-  f => { vdrag = false; volHold = Date.now() + HOLD_MS; if (st && st.state === 'ok') st.volume = Math.round(f * 100); act('volume', '?percent=' + Math.round(f * 100), 800); });
 $('pp').innerHTML = PLAY;
 poll(); setInterval(poll, 2500);
 
@@ -2047,27 +2055,10 @@ let lyricsKey = '', lyricsLines = [], lyricsEls = [], lyricsIndex = -1, lyricsSy
 let lyricsScrollY = 0, lyricsManualUntil = 0;
 let albumColors = ['242,184,75', '118,76,42'];
 let guestQrKey = '';
-let volumeHideTimer = 0, lyricsVolumeHideTimer = 0;
 function updateLyricsProgress(valueMs) {
   if (!$('lyricsScreen').classList.contains('on') || !st || st.state !== 'ok') return;
   const p = valueMs != null ? valueMs : st.progress + (st.playing ? Date.now() - tFetch : 0);
   paintLyricsProgress(p / (st.duration || 1), p);
-}
-function showVolumeControls() {
-  const e = document.querySelector('#spotifyTile .mright');
-  if (!e) return;
-  e.classList.remove('idle');
-  clearTimeout(volumeHideTimer);
-  volumeHideTimer = setTimeout(() => e.classList.add('idle'), 4500);
-}
-function showLyricsVolume(v) {
-  const e = $('lyricsVolume');
-  if (!e) return;
-  v = Math.max(0, Math.min(1, Number(v) || 0));
-  $('lyricsVolumeFill').style.height = (v * 100) + '%';
-  e.classList.add('on');
-  clearTimeout(lyricsVolumeHideTimer);
-  lyricsVolumeHideTimer = setTimeout(() => e.classList.remove('on'), 1800);
 }
 function albumFallback(src) {
   const palettes = [
@@ -3068,14 +3059,27 @@ button:active,.clk:active{opacity:.55;transform:scale(.94)}
   const Z = {
     top:   {gain: 1,   hit: 'pbar', track: 'ptrack', vert: false, read: () => clamp(+($$('pfill').dataset.frac) || 0),
             say: v => 'Seek ' + mmss(v * total()) + ' / ' + $$('ttot').textContent},
-    right: {gain: 1.3, hit: 'vbar', track: 'vtrack', vert: true,  read: () => frac($$('vfill').style.height),
+    right: {gain: 1.3, read: () => volumeFraction,
             say: v => 'Spotify volume ' + Math.round(v * 100)},
     left:  {gain: 1.3, read: () => clamp(+$$('avol').value / 100),
             say: v => 'Device volume ' + Math.round(v * 100)}
   };
-  let eg = null, lastIn = 0;
+  let eg = null, lastIn = 0, lastVolSend = 0;
   function put(z, v, type) {
     const s = Z[z];
+    if (z === 'right') {
+      const pct = Math.round(clamp(v) * 100);
+      vdrag = type !== 'pointerup';
+      volHold = Date.now() + HOLD_MS;
+      if (st && st.state === 'ok') st.volume = pct;
+      showVolumePill(pct);
+      const now = performance.now();
+      if (type === 'pointerup' || type === 'pointerdown' || now - lastVolSend > 100) {
+        lastVolSend = now;
+        fetch('/api/volume?percent=' + pct, {method: 'POST'}).catch(() => {});
+      }
+      return;
+    }
     if (z === 'left') {
       if (type === 'pointerdown') return;
       const av = $$('avol'), now = performance.now();
@@ -3097,27 +3101,20 @@ button:active,.clk:active{opacity:.55;transform:scale(.94)}
       if (!allowed || (d.z === 'left' && fm === 'lyrics')) { eg = null; return; }
       eg = {z: d.z, v: Z[d.z].read()};
       if (d.z === 'top' && fm === 'lyrics') $('lyricsScreen').classList.add('seeking');
-      if (d.z === 'right') {
-        if (fm === 'lyrics') showLyricsVolume(eg.v); else showVolumeControls();
-      }
+      if (d.z === 'right') showVolumePill(eg.v * 100);
       put(d.z, eg.v, 'pointerdown');
     } else if (d.p === 'end') {
       release();
       if (eg && eg.z === d.z) {
         put(d.z, eg.v, 'pointerup');
         if (d.z === 'top') $('lyricsScreen').classList.remove('seeking');
-        if (d.z === 'right') {
-          if (fm === 'lyrics') showLyricsVolume(eg.v); else showVolumeControls();
-        }
+        if (d.z === 'right') showVolumePill(eg.v * 100);
         eg = null;
       }
     } else if (eg && eg.z === d.z) {
       eg.v = clamp(eg.v + d.d * Z[d.z].gain);
       put(d.z, eg.v, 'pointermove');
-      if (d.z === 'right') {
-        if (fm === 'lyrics') showLyricsVolume(eg.v); else showVolumeControls();
-      }
-      say(Z[d.z].say(eg.v));
+      if (d.z !== 'right') say(Z[d.z].say(eg.v));
     }
   }
 

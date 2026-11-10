@@ -219,14 +219,14 @@ consumed by the Chromium kiosk and not exposed directly to the LAN.
 Spotify tile layout
 -------------------
 The Spotify tile uses its full width for the album art, title, progress bar and
-transport controls. The volume control is a floating overlay on the right that
-is hidden on startup and shown only while the right touchpad edge is being
-used. It does not reserve layout space and therefore cannot move or narrow the
-rest of the music widget. The album/title group is horizontally centred, while
-the progress bar and transport row stretch across the full content width.
+transport controls. Spotify volume is shown by a single bottom-centre pill
+overlay while the right touchpad edge is being used. The pill fades out after
+2.2 seconds and never reserves layout space, so it cannot move or narrow the
+music widget. The album/title group is horizontally centred, while the progress
+bar and transport row stretch across the full content width.
 
-The progress fill is width-based, not transform-scaled, so its rounded left and
-right ends keep identical pill geometry at every progress value.
+Both progress fills and the volume fill are width-based, not transform-scaled,
+so their rounded ends keep identical pill geometry at every value.
 
 The visible main screen is a 2 x 2 grid.
 
@@ -278,8 +278,8 @@ Lyrics screen:
   A full-width song progress bar runs along the top edge, with elapsed/total
   time at the upper right.
   The top touchpad edge seeks the song while lyrics are open.
-  The right touchpad edge controls Spotify volume and shows a temporary
-  vertical volume bar on the lyric screen.
+  The right touchpad edge controls Spotify volume and shows the same
+  bottom-centre volume pill used on the main dashboard.
   Two-finger tap pauses/plays without leaving the lyrics screen.
   Swipe up/down or use two-finger scrolling to scroll manually for 8 seconds.
   Top-left/top-right corners change tracks while lyrics remain open.
@@ -399,9 +399,9 @@ Top edge:
   Song seek control while the lyrics screen is open.
 
 Right edge:
-  Spotify volume in normal dashboard mode and in the lyrics screen. The
-  Spotify tile volume column fades away after 4.5 seconds of inactivity and
-  reappears when the right edge is used again.
+  Spotify volume in normal dashboard mode and in the lyrics screen. A horizontal
+  pill appears at the bottom centre while adjusting and fades after 2.2 seconds.
+  The pill's fill uses the same rounded-end geometry as the progress bars.
 
 Left edge:
   Local device volume in normal dashboard mode.
@@ -605,9 +605,8 @@ scrolling temporarily pauses auto-follow for eight seconds.
 
 Lyric progress uses the same underlying #pbar/#ptrack state as the main player.
 The top-edge gesture writes to that shared seek control and updates the
-top-of-screen lyric progress bar immediately. The right-edge gesture likewise
-uses the existing Spotify volume control and reveals a temporary lyric volume
-bar.
+top-of-screen lyric progress bar immediately. The right-edge gesture uses the
+same shared Spotify volume control and reveals the bottom-centre volume pill.
 
 The one-time storage migration (featureSchema 3) resets the earlier experimental
 -1.5/+1.5 offsets to 0.0 for browsers that already saved one of those values.
@@ -786,8 +785,9 @@ No third-party QR service is used.
   milliseconds, not from the once-per-second text tick. This prevents the
   second hand from snapping backward at the second boundary.
 - The top-edge day ribbon uses simple positioned blocks, no per-frame canvas.
-- The Spotify tile volume column uses a CSS opacity transition and a 4.5 second
-  inactivity timer; the gesture still works while the column is invisible.
+- The Spotify volume pill uses a CSS opacity/translate transition and a 2.2
+  second inactivity timer; its fill is width-based with the same pill radius as
+  the progress bar.
 - Daily fun facts are selected from a local hard-coded list based on the day
   of year, so they require no network request.
 - The QR code is rendered once per SSID/password pair and cached in page memory.
