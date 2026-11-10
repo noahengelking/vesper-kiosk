@@ -215,6 +215,16 @@ consumed by the Chromium kiosk and not exposed directly to the LAN.
 ================================================================================
 6. FRONTEND LAYOUT
 ================================================================================
+
+Spotify tile layout
+-------------------
+The Spotify tile reserves a fixed right-hand volume column even while its
+contents fade after inactivity. The remaining music column is padded
+symmetrically so the album art, title, progress bar and transport controls sit
+centred within the tile. The progress track and its fill use the same pill
+radius, with the fill inset slightly inside the track for identical rounded
+ends on both sides.
+
 The visible main screen is a 2 x 2 grid.
 
   +--------------------------------+--------------------------------+

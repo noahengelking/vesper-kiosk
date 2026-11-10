@@ -94,8 +94,8 @@ button{font:inherit;color:var(--fg);background:none;border:0;cursor:pointer}
 .agd.today{color:var(--acc)}
 
 /* music */
-.music{display:flex;gap:2.5vw;flex:1;min-height:0}
-.mleft{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:space-between}
+.music{display:flex;gap:2.5vw;flex:1;min-height:0;align-items:stretch}
+.mleft{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:space-evenly;gap:1.2vh;padding-left:1.2vw}
 .np{display:flex;gap:2vw;align-items:center}
 #art{height:14vh;width:14vh;object-fit:cover;background:var(--line);flex:none}
 .meta{min-width:0;position:relative}
@@ -121,7 +121,7 @@ button{font:inherit;color:var(--fg);background:none;border:0;cursor:pointer}
 .times{display:flex;justify-content:space-between;font-size:1.9vh;color:var(--dim)}
 .pbar{height:7vh;display:flex;align-items:center;touch-action:none;cursor:pointer}
 .ptrack{height:1.8vh;width:100%;background:var(--line);position:relative;border-radius:1vh}
-.pfill{height:100%;width:100%;transform:scaleX(0);transform-origin:left center;background:var(--acc);border-radius:1vh;will-change:transform}
+.pfill{position:absolute;left:.35vh;top:.35vh;bottom:.35vh;width:calc(100% - .7vh);transform:scaleX(0);transform-origin:left center;background:var(--acc);border-radius:1vh;will-change:transform}
 .pthumb{position:absolute;top:50%;left:0;width:3.2vh;height:3.2vh;border-radius:50%;background:var(--fg);transform:translate(-50%,-50%)}
 .ctl{display:flex;justify-content:center;align-items:center;gap:2.5vw}
 .ctl button{position:relative;width:10vh;height:10vh;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--btn)}
@@ -131,7 +131,7 @@ button{font:inherit;color:var(--fg);background:none;border:0;cursor:pointer}
 .ctl button.sm.on{color:var(--acc)}
 .ctl button.sm svg{width:3.4vh;height:3.4vh;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 #one{display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:1.3vh}
-.mright{width:8vh;display:flex;flex-direction:column;align-items:center;gap:1vh}
+.mright{width:8vh;flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1vh;margin-left:1.2vw}
 .vlab{font-size:2vh;color:var(--dim)}
 .vbar{flex:1;min-height:0;width:100%;display:flex;justify-content:center;touch-action:none;cursor:pointer;padding:1.8vh 0}
 .vtrack{width:1.8vh;height:100%;background:var(--line);position:relative;border-radius:1vh}
@@ -192,8 +192,8 @@ button{font:inherit;color:var(--fg);background:none;border:0;cursor:pointer}
   radial-gradient(circle at 92% 88%, rgba(var(--alb2),.22), transparent 48%),
   var(--bg)}
 #spotifyTile>*{position:relative;z-index:1}
-#spotifyTile .mright{transition:opacity .45s ease}
-#spotifyTile .mright.idle{opacity:0}
+#spotifyTile .mright> *{transition:opacity .45s ease}
+#spotifyTile .mright.idle> *{opacity:0}
 #timerBadge{font-size:1.55vh;letter-spacing:.12em;text-transform:uppercase;color:var(--acc);display:none}
 #timerBadge.on{display:block}
 .dayribbon{display:none;position:fixed;top:0;left:0;right:0;height:1.7vh;z-index:12;pointer-events:none;background:transparent}
