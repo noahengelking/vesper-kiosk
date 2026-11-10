@@ -1,0 +1,10 @@
+[Unit]
+Description=Desk dashboard audio control
+After=pipewire.service pipewire-pulse.service
+
+[Service]
+ExecStart=/usr/bin/python3 %h/dashboard/audio_server.py
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

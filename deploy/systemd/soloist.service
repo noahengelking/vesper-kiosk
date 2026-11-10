@@ -1,0 +1,13 @@
+[Unit]
+Description=Spotify Soloist (Vesper)
+After=pipewire.service pipewire-pulse.service
+
+[Service]
+EnvironmentFile=%h/.config/desk-dashboard/soloist.env
+ExecStart=%h/.local/bin/soloist --device-name Vesper --api-key ${SOLOIST_API_KEY}
+Restart=on-failure
+RestartSec=10
+RestartPreventExitStatus=10
+
+[Install]
+WantedBy=default.target

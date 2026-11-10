@@ -1,0 +1,3210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Desk</title>
+<link rel="icon" href="data:,">
+<style>
+:root{--bg:#0b0b0c;--fg:#e8e6e1;--dim:#7d7b76;--line:#26262a;--acc:#f2b84b;--btn:#2a2a2e;--btn2:#3b3b40}
+:root[data-theme=light]{--bg:#f3f0e8;--fg:#1c1c1e;--dim:#85817a;--line:#dcd7ca;--acc:#c98d12;--btn:#e2ddd0;--btn2:#d2ccbc}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--fg);font-family:"JetBrains Mono",ui-monospace,monospace;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:manipulation}
+button{font:inherit;color:var(--fg);background:none;border:0;cursor:pointer}
+.grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1px;background:var(--line);height:100vh}
+.tile{background:var(--bg);padding:3vh 2.5vw;display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
+.label{font-size:1.7vh;letter-spacing:.22em;text-transform:uppercase;color:var(--dim);margin-bottom:1.5vh}
+.hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5vh}
+.hd .label{margin:0}
+.stale{display:none;color:var(--acc);letter-spacing:.1em}
+#net{position:fixed;top:1.2vh;right:9vw;font-size:1.5vh;color:var(--acc);letter-spacing:.14em;text-transform:uppercase;display:none;z-index:15}
+
+/* clocks */
+.stage{flex:1;min-height:0;position:relative;touch-action:none}
+.clk{position:absolute;top:50%;transform:translate(-50%,-50%);width:14vh;opacity:.55;transition:left .4s ease,width .4s ease,opacity .4s ease;cursor:pointer}
+.clk.p0{left:50%;width:25vh;opacity:1}
+.clk.p1{left:87%}
+.clk.p2{left:13%}
+.clk svg{width:100%;height:auto;display:block}
+.cap{text-align:center;margin-top:.6vh}
+.city{font-size:1.6vh;letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
+.tm{font-size:2.4vh}
+.dt{display:none;font-size:1.9vh;color:var(--dim)}
+.clk.p0 .tm{font-size:3.2vh}
+.clk.p0 .dt{display:block}
+.nextev{font-size:2.2vh;color:var(--dim);margin-top:.8vh;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nextev b{font-weight:400;color:var(--fg)}
+.nextev i{font-style:normal;color:var(--acc)}
+
+/* weather */
+.wnow{display:flex;gap:3vw;align-items:center;flex:1;min-height:0}
+.wl{flex:none}
+.wr{flex:1;min-width:0}
+.big{font-size:12vh;line-height:1;font-weight:300}
+.cond{display:flex;align-items:center;gap:1vw;font-size:3.2vh;margin-top:1.2vh;color:var(--acc)}
+.cond .ic{color:var(--acc);width:4.2vh;height:4.2vh;flex:none}
+.row{display:flex;justify-content:space-between;align-items:baseline;padding:1.3vh 0;border-bottom:1px solid var(--line);font-size:2.6vh}
+.row span:first-child{color:var(--dim)}
+#fc{flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;touch-action:pan-y}
+#fc::-webkit-scrollbar{display:none}
+#fc .row{display:grid;grid-template-columns:4.5em 1fr 5.8em 3.2em;column-gap:1vw}
+#fc .row span:nth-child(3),#fc .row span:nth-child(4){text-align:right}
+
+/* pill switch + hourly strip */
+.pill{display:flex;border:1px solid var(--line);border-radius:5vh;padding:.4vh}
+.pill button{height:4.6vh;border-radius:4vh;padding:0 1.8vw;font-size:1.8vh;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.pill button.on{background:var(--fg);color:var(--bg)}
+.hours{position:relative;display:flex;gap:1px;overflow-x:auto;flex:1;min-height:0;background:var(--line);scrollbar-width:none;touch-action:pan-x}
+.hours::-webkit-scrollbar{display:none}
+.h{flex:none;width:11vh;background:var(--bg);padding:1.5vh 1vh;display:flex;flex-direction:column;align-items:center;gap:1.2vh}
+.h .t{font-size:2vh;color:var(--dim)}
+.h .d{font-size:3.4vh}
+.h .r{font-size:1.9vh;color:var(--acc)}
+.h.now{outline:1px solid var(--acc);outline-offset:-1px}
+.h.past{opacity:.4}
+.ic{width:4.2vh;height:4.2vh;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;color:var(--fg)}
+
+/* calendar */
+.cal{display:flex;gap:2.5vw;flex:1;min-height:0}
+.cleft{width:46%;flex:none;display:flex;flex-direction:column;min-height:0}
+.cright{flex:1;min-width:0;display:flex;flex-direction:column;min-height:0}
+.chd{display:flex;justify-content:space-between;align-items:center;margin-bottom:.8vh}
+.cnav{width:5vh;height:5vh;border-radius:50%;background:var(--btn);font-size:2.8vh;display:flex;align-items:center;justify-content:center}
+.cnav:active{background:var(--btn2)}
+.cmon{font-size:2.3vh;letter-spacing:.06em}
+.cwk{display:grid;grid-template-columns:repeat(7,1fr);font-size:1.5vh;color:var(--dim);text-align:center;margin-bottom:.4vh}
+#cgrid{display:grid;grid-template-columns:repeat(7,1fr);grid-template-rows:repeat(6,1fr);flex:1;min-height:0}
+#cgrid button{position:relative;font-size:2vh;border-radius:3vh}
+#cgrid button.o{color:var(--dim);opacity:.45}
+#cgrid button.t{outline:1px solid var(--acc);outline-offset:-1px;color:var(--acc)}
+#cgrid button.s{background:var(--fg);color:var(--bg)}
+#cgrid button i{position:absolute;bottom:.5vh;left:50%;width:.7vh;height:.7vh;margin-left:-.35vh;border-radius:50%;background:var(--acc)}
+#cgrid button.s i{background:var(--bg)}
+#cdate{font-size:2.5vh;margin-bottom:1vh}
+#clist,#ag{flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;touch-action:pan-y}
+#clist::-webkit-scrollbar,#ag::-webkit-scrollbar{display:none}
+.ev{padding:1.1vh 0;border-bottom:1px solid var(--line)}
+.et{font-size:1.8vh;color:var(--acc)}
+.en{font-size:2.3vh;margin-top:.3vh;overflow:hidden;text-overflow:ellipsis}
+.none{font-size:2.1vh;color:var(--dim)}
+#ag .ev{display:grid;grid-template-columns:11em 1fr;column-gap:1.5vw;align-items:baseline}
+#ag .en{margin-top:0;white-space:nowrap}
+#ag .ev.p{opacity:.45}
+.agd{font-size:1.7vh;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);padding:1.6vh 0 .5vh}
+.agd.today{color:var(--acc)}
+
+/* music */
+.music{display:flex;gap:2.5vw;flex:1;min-height:0}
+.mleft{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:space-between}
+.np{display:flex;gap:2vw;align-items:center}
+#art{height:14vh;width:14vh;object-fit:cover;background:var(--line);flex:none}
+.meta{min-width:0;position:relative}
+#title{font-size:3vh;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#artist{font-size:2.3vh;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:.6vh}
+#msg{font-size:1.8vh;color:var(--acc);margin-top:.8vh;cursor:pointer}
+#devmenu{display:none;position:absolute;left:0;top:100%;margin-top:.6vh;z-index:6;min-width:22vw;max-height:19vh;overflow-y:auto;background:var(--bg);border:1px solid var(--line);border-radius:2vh;padding:.4vh 0;scrollbar-width:none;touch-action:pan-y}
+#devmenu::-webkit-scrollbar{display:none}
+#devmenu .dev{display:block;width:100%;text-align:left;padding:1vh 1.4vw;font-size:2vh;white-space:nowrap}
+#devmenu .dev small{margin-left:1vw;font-size:1.5vh;color:var(--dim)}
+#devmenu .dev.cur{color:var(--acc)}
+#devmenu .dev:active{background:var(--btn)}
+#devmenu .none{color:var(--dim)}
+#aout{display:none;align-items:center;gap:1vw;margin-top:.8vh;font-size:1.8vh}
+#aname{color:var(--acc);cursor:pointer;white-space:nowrap}
+#avol{width:12vw;accent-color:var(--acc)}
+#amenu{display:none;position:absolute;left:0;top:100%;margin-top:.6vh;z-index:6;min-width:22vw;max-height:19vh;overflow-y:auto;background:var(--bg);border:1px solid var(--line);border-radius:2vh;padding:.4vh 0;scrollbar-width:none;touch-action:pan-y}
+#amenu::-webkit-scrollbar{display:none}
+#amenu .dev{display:block;width:100%;text-align:left;padding:1vh 1.4vw;font-size:2vh;white-space:nowrap}
+#amenu .dev.cur{color:var(--acc)}
+#amenu .dev.off{opacity:.5}
+#amenu .dev:active{background:var(--btn)}
+.times{display:flex;justify-content:space-between;font-size:1.9vh;color:var(--dim)}
+.pbar{height:7vh;display:flex;align-items:center;touch-action:none;cursor:pointer}
+.ptrack{height:1.8vh;width:100%;background:var(--line);position:relative;border-radius:1vh}
+.pfill{height:100%;width:100%;transform:scaleX(0);transform-origin:left center;background:var(--acc);border-radius:1vh;will-change:transform}
+.pthumb{position:absolute;top:50%;left:0;width:3.2vh;height:3.2vh;border-radius:50%;background:var(--fg);transform:translate(-50%,-50%)}
+.ctl{display:flex;justify-content:center;align-items:center;gap:2.5vw}
+.ctl button{position:relative;width:10vh;height:10vh;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--btn)}
+.ctl button:active{background:var(--btn2)}
+.ctl button svg{width:4.6vh;height:4.6vh;fill:currentColor}
+.ctl button.sm{width:7.5vh;height:7.5vh;color:var(--dim)}
+.ctl button.sm.on{color:var(--acc)}
+.ctl button.sm svg{width:3.4vh;height:3.4vh;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#one{display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:1.3vh}
+.mright{width:8vh;display:flex;flex-direction:column;align-items:center;gap:1vh}
+.vlab{font-size:2vh;color:var(--dim)}
+.vbar{flex:1;min-height:0;width:100%;display:flex;justify-content:center;touch-action:none;cursor:pointer;padding:1.8vh 0}
+.vtrack{width:1.8vh;height:100%;background:var(--line);position:relative;border-radius:1vh}
+.vfill{position:absolute;left:0;right:0;bottom:0;height:0;background:var(--acc);border-radius:1vh}
+.vthumb{position:absolute;left:50%;bottom:0;width:3.2vh;height:3.2vh;border-radius:50%;background:var(--fg);transform:translate(-50%,50%)}
+
+/* settings sheet */
+#edge{position:fixed;top:0;left:0;right:0;height:4vh;z-index:20;touch-action:none}
+#edge::after{content:"";position:absolute;top:.7vh;left:50%;width:8vh;height:.5vh;border-radius:1vh;background:var(--dim);opacity:.35;transform:translateX(-50%)}
+#scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:opacity .3s;z-index:25}
+#scrim.open{opacity:1;pointer-events:auto}
+#sheet{position:fixed;top:0;left:18vw;right:18vw;z-index:30;background:var(--bg);border:1px solid var(--line);border-top:0;border-radius:0 0 3vh 3vh;padding:3vh 3vw 3.5vh;transform:translateY(-105%);transition:transform .3s ease;touch-action:none}
+#sheet.open{transform:translateY(0)}
+.sh-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:1vh}
+.sh-hd .label{margin:0}
+.x{width:6vh;height:6vh;border-radius:50%;background:var(--btn);display:flex;align-items:center;justify-content:center}
+.x svg{width:2.6vh;height:2.6vh;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.srow{display:flex;justify-content:space-between;align-items:center;padding:1.6vh 0;border-bottom:1px solid var(--line)}
+.srow:last-child{border-bottom:0}
+.srow>span{color:var(--dim);letter-spacing:.12em;text-transform:uppercase;font-size:1.8vh}
+.sel{border:1px solid var(--line);border-radius:4vh;padding:1.2vh 2.2vw;font-size:2.4vh;min-width:20vw;text-align:right}
+.sel:active{background:var(--btn)}
+.netv{font-size:2vh;text-align:right;line-height:1.5}
+.bsl{display:flex;align-items:center;gap:1.2vw}
+.bval{font-size:2vh;color:var(--dim);width:4em;text-align:right}
+#bbar{width:22vw;height:6vh;display:flex;align-items:center;touch-action:none;cursor:pointer}
+.btrack{height:1.8vh;width:100%;background:var(--line);position:relative;border-radius:1vh}
+.bfill{height:100%;width:0;background:var(--acc);border-radius:1vh}
+.bthumb{position:absolute;top:50%;left:0;width:3.2vh;height:3.2vh;border-radius:50%;background:var(--fg);transform:translate(-50%,-50%)}
+.netv em{font-style:normal;color:var(--acc)}
+#picker{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.45);display:none}
+#picker.open{display:block}
+.pbox{position:absolute;left:30vw;right:30vw;top:10vh;bottom:10vh;background:var(--bg);border:1px solid var(--line);border-radius:3vh;padding:3vh 2vw;display:flex;flex-direction:column}
+#plist{position:relative;flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;touch-action:pan-y}
+#plist::-webkit-scrollbar{display:none}
+#plist button{display:block;width:100%;text-align:left;padding:1.6vh 0;font-size:2.6vh;border-bottom:1px solid var(--line)}
+#plist button.cur{color:var(--acc)}
+#plist button{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#plist button small{display:block;font-size:1.8vh;color:var(--dim);overflow:hidden;text-overflow:ellipsis}
+#pls,#upn{color:var(--fg)}
+#pls:active,#upn:active{background:var(--btn)}
+#bat{position:fixed;top:.25vh;right:1.5vw;display:none;align-items:center;gap:.5vw;font-size:1.6vh;color:var(--dim);z-index:15;background:var(--bg);padding:.15vh .45vw;border-radius:1vh}
+#bat svg{width:3.2vh;height:1.8vh}
+#bat.chg,#bat.low{color:var(--acc)}
+#plist button:active{background:var(--btn)}
+.prow{display:flex;align-items:center;gap:1.5vw;border-bottom:1px solid var(--line)}
+#plist .prow>button.main{flex:1;min-width:0;width:auto;border-bottom:0}
+#plist .prow>button.pplay{flex:none;width:6vh;height:6vh;padding:0;border-bottom:0;border-radius:50%;background:var(--btn);display:flex;align-items:center;justify-content:center;color:var(--fg)}
+#plist .prow>button.pplay:active{background:var(--btn2)}
+#plist .prow>button.pplay svg{width:2.6vh;height:2.6vh;fill:currentColor}
+</style>
+
+<style id="feature-style">
+/* ---------- feature surfaces ---------- */
+#spotifyTile{position:relative;overflow:hidden;isolation:isolate;transition:background .8s ease}
+#spotifyTile.ambient{background:
+  radial-gradient(circle at 12% 8%, rgba(var(--alb1),.30), transparent 46%),
+  radial-gradient(circle at 92% 88%, rgba(var(--alb2),.22), transparent 48%),
+  var(--bg)}
+#spotifyTile>*{position:relative;z-index:1}
+#spotifyTile .mright{transition:opacity .45s ease}
+#spotifyTile .mright.idle{opacity:0}
+#timerBadge{font-size:1.55vh;letter-spacing:.12em;text-transform:uppercase;color:var(--acc);display:none}
+#timerBadge.on{display:block}
+.dayribbon{display:none;position:fixed;top:0;left:0;right:0;height:1.7vh;z-index:12;pointer-events:none;background:transparent}
+body.ribbon-on .dayribbon{display:block}
+.ribbon-track{position:relative;height:100%;border-radius:0;background:rgba(125,123,118,.12);overflow:hidden}
+.ribbon-blocks{position:absolute;inset:0}
+.ribbon-ev{position:absolute;top:.28vh;bottom:.28vh;border-radius:.45vh;background:var(--acc);opacity:.64;overflow:hidden;white-space:nowrap;font-size:0;padding:0}
+.ribbon-ev.allday{opacity:.22;top:0;bottom:auto;height:.28vh;padding:0}
+.ribbon-now{position:absolute;top:0;bottom:0;width:1px;background:var(--fg);box-shadow:0 0 0 1px var(--bg)}
+.ribbon-sun{position:absolute;top:50%;width:1.1vh;height:1.1vh;border-radius:50%;background:var(--acc);transform:translate(-50%,-50%)}
+.ribbon-labels{display:none}
+.advice{display:block;width:100%;text-align:left;font-size:1.75vh;line-height:1.35;color:var(--acc);margin-top:1vh;min-height:2.4vh;background:none;border:0;padding:0}
+.advice:empty{display:none}
+.advice b{color:var(--fg);font-weight:400}
+.meeting-banner{display:none;align-items:center;justify-content:space-between;gap:2vw;margin:0 0 1.2vh;padding:1vh 1.5vw;border:1px solid var(--acc);border-radius:1.5vh;background:rgba(242,184,75,.08)}
+.meeting-banner.on{display:flex}
+.meeting-banner .mt{font-size:2.2vh;color:var(--fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.meeting-banner .ml{font-size:1.4vh;letter-spacing:.16em;color:var(--acc);text-transform:uppercase}
+.meeting-banner .mc{font-size:2.1vh;color:var(--acc);white-space:nowrap}
+
+/* ---------- fullscreen overlays (driven by the trackpad tap/slide layer) ---------- */
+.vscreen{position:fixed;inset:0;z-index:52;display:none;flex-direction:column;background:var(--bg);color:var(--fg);padding:5vh 7vw;box-sizing:border-box}
+.vscreen.on{display:flex}
+.vscreen .vk{font-size:1.55vh;letter-spacing:.22em;text-transform:uppercase;color:var(--acc)}
+.vscreen .vx{position:absolute;top:3vh;right:4vw;width:7vh;height:7vh;border-radius:50%;border:1px solid var(--line);background:var(--btn);font-size:3.2vh;color:var(--fg)}
+.vscreen .vh{font-size:3.3vh;line-height:1.15;margin:1.2vh 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vscreen .vsub{font-size:2.1vh;color:var(--dim);line-height:1.4}
+.vscreen .vcenter{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;min-height:0}
+.vscreen .vtimer{font-size:18vh;line-height:1;font-weight:200;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.vscreen .vtip{font-size:1.8vh;color:var(--dim);margin-top:3vh;letter-spacing:.1em}
+#focusScreen{background:radial-gradient(circle at 50% 46%,rgba(242,184,75,.09),transparent 42%),var(--bg)}
+#focusScreen .vtimer{color:var(--acc)}
+#focusScreen .vsub{max-width:65vw}
+#lyricsScreen{background:var(--bg);padding:6.2vh 10vw 5vh}
+.lyrics-progress{position:absolute;top:0;left:0;right:0;height:1.35vh;z-index:3;background:rgba(125,123,118,.16);overflow:visible}
+.lyrics-progress-fill{position:absolute;left:0;top:0;bottom:0;width:100%;transform:scaleX(0);transform-origin:left center;background:var(--acc);will-change:transform}
+.lyrics-progress-thumb{position:absolute;top:50%;left:0;width:1.8vh;height:1.8vh;border-radius:50%;background:var(--fg);transform:translate(-50%,-50%);opacity:0;transition:opacity .18s;box-shadow:0 0 0 .25vh var(--bg)}
+#lyricsScreen.seeking .lyrics-progress-thumb{opacity:1}
+.lyrics-time{position:absolute;top:2.2vh;right:10vw;font-size:1.55vh;color:var(--dim);font-variant-numeric:tabular-nums;z-index:3}
+.lyrics-volume{position:absolute;right:2.8vw;top:50%;transform:translateY(-50%);width:1.4vh;height:30vh;border-radius:1vh;background:rgba(125,123,118,.18);overflow:hidden;opacity:0;transition:opacity .25s;z-index:3}
+.lyrics-volume.on{opacity:1}
+.lyrics-volume-fill{position:absolute;left:0;right:0;bottom:0;height:0;background:var(--acc);border-radius:1vh}
+#lyricsScreen .lyr-head{display:flex;align-items:flex-end;gap:2vw;margin-bottom:3vh;flex:none}
+#lyricsScreen .lyr-art{width:13vh;height:13vh;border-radius:1.5vh;object-fit:cover;background:var(--line)}
+#lyricsScreen .lyr-meta{min-width:0;flex:1}
+#lyricsBox{flex:1;min-height:0;overflow:hidden;display:block;position:relative;mask-image:linear-gradient(transparent,#000 7%,#000 93%,transparent);-webkit-mask-image:linear-gradient(transparent,#000 7%,#000 93%,transparent)}
+#lyricsLines{position:relative;transition:transform .32s ease;will-change:transform}
+.lyric-line{font-size:4.1vh;line-height:1.55;color:var(--dim);transition:color .2s,opacity .2s;white-space:pre-wrap}
+.lyric-line.now{color:var(--fg);font-size:4.6vh;text-shadow:0 0 .6vh rgba(var(--alb1,242,184,75),.2)}
+.lyric-line.near{color:var(--fg);opacity:.55}
+#lyricsScreen.no-sync #lyricsLines{transform:none!important}
+#briefScreen .brief-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:1.2vh 4vw;margin-top:3vh;font-size:2.35vh;color:var(--dim)}
+#briefScreen .brief-grid b{display:block;color:var(--fg);font-weight:400;margin-top:.35vh}
+#briefScreen .brief-advice{margin-top:4vh;padding:2.2vh 2.6vw;border-left:3px solid var(--acc);font-size:2.3vh;line-height:1.4;color:var(--fg);max-width:70vw}
+#briefScreen .brief-fact{margin-top:3vh;padding-top:2vh;border-top:1px solid var(--line);font-size:2vh;line-height:1.45;color:var(--fg);max-width:72vw}
+#briefScreen .brief-fact .k{font-size:1.4vh;letter-spacing:.18em;text-transform:uppercase;color:var(--acc);margin-bottom:.7vh}
+#healthScreen{overflow-y:auto}
+.health-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5vh 2vw;margin-top:3vh}
+.health-card{border:1px solid var(--line);border-radius:1.5vh;padding:2vh 1.8vw;min-height:10vh;display:flex;flex-direction:column;justify-content:space-between}
+.health-card span{font-size:1.45vh;letter-spacing:.15em;text-transform:uppercase;color:var(--dim)}
+.health-card b{font-size:2.8vh;font-weight:400;color:var(--fg);word-break:break-word}
+.health-card.warn b{color:var(--acc)}
+#guestScreen{background:radial-gradient(circle at 50% 20%,rgba(242,184,75,.12),transparent 45%),var(--bg)}
+#guestScreen .guest-welcome{font-size:9vh;line-height:1;font-weight:200;letter-spacing:-.04em}
+#guestScreen .guest-sub{font-size:2.6vh;color:var(--dim);margin-top:2vh}
+#guestScreen .guest-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:3vw;margin-top:7vh;font-size:2.1vh;color:var(--dim)}
+#guestScreen .guest-grid b{display:block;font-size:3.3vh;color:var(--fg);font-weight:300;margin-top:.8vh}
+#idleScreen{z-index:48;background:var(--bg);align-items:center;justify-content:center;padding:0}
+#idleClock{font-size:18vh;font-weight:200;line-height:1;letter-spacing:-.05em;font-variant-numeric:tabular-nums}
+#idleDate{font-size:2.3vh;color:var(--dim);margin-top:2vh;letter-spacing:.1em}
+#idleWeather{font-size:1.9vh;color:var(--acc);margin-top:4vh}
+#toast{position:fixed;left:50%;bottom:4vh;transform:translateX(-50%) translateY(2vh);z-index:75;padding:1.1vh 2.4vh;border-radius:3vh;background:var(--bg);border:1px solid var(--line);color:var(--fg);font-size:2vh;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:80vw;text-align:center}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ---------- settings pages and new controls ---------- */
+.setpage[hidden]{display:none!important}
+.sheet-sub{margin:-.4vh 0 1.4vh;font-size:1.5vh;color:var(--dim);letter-spacing:.12em;text-transform:uppercase}
+.srow.cat{cursor:pointer}
+.srow.backrow{opacity:.8}
+.sel.on{background:var(--fg);color:var(--bg)}
+.srow .sel{white-space:nowrap;max-width:48vw;overflow:hidden;text-overflow:ellipsis}
+html[data-daynight=night]{--bg:#08080a;--fg:#ddd8cd;--dim:#77746d;--line:#222226;--acc:#e5ac3f}
+html[data-daynight=night] #spotifyTile.ambient{filter:saturate(.82) brightness(.94)}
+@media (max-width:900px){
+  .vscreen{padding:4vh 5vw}
+  #lyricsScreen{padding:4vh 6vw}
+  .lyric-line{font-size:3.5vh}.lyric-line.now{font-size:3.9vh}
+  .health-grid{grid-template-columns:1fr 1fr}
+  #guestScreen .guest-grid{grid-template-columns:1fr}
+}
+</style>
+
+<style id="refinement-style">
+.advice{text-align:center;margin-left:auto;margin-right:auto;max-width:92%}
+#spotifyTile .pill button{padding:0 1.15vw;color:var(--dim)}
+#spotifyTile .pill button:focus,#spotifyTile .pill button:focus-visible{outline:none;color:var(--dim)}
+#ambientGlow{position:fixed;inset:0;z-index:2;pointer-events:none;mix-blend-mode:screen;opacity:0;transition:opacity .8s ease,background 1s ease}
+.lyric-line{color:var(--dim);opacity:.55;transition:opacity .15s}
+.lyric-line.now{color:#fff;opacity:1;font-size:4.9vh;font-weight:600;text-shadow:0 0 1vh rgba(var(--alb1,242,184,75),.55)}
+.lyric-line.near{color:var(--fg);opacity:.42}
+#ambBar{width:22vw;height:6vh;display:flex;align-items:center;touch-action:none;cursor:pointer}
+#guestTip{max-width:48vw;line-height:1.5}
+.guest-content{position:relative;z-index:2;display:flex;flex-direction:column;width:100%;height:100%}
+.guest-bg{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+.guest-bg span{position:absolute;width:52vh;height:52vh;border-radius:50%;filter:blur(55px);opacity:.22;will-change:transform;animation:guestDrift 28s ease-in-out infinite alternate}
+.guest-bg .b1{left:2%;top:12%;background:#f2b84b;animation-duration:27s}
+.guest-bg .b2{right:10%;top:5%;background:#db744b;animation-duration:36s;animation-delay:-9s}
+.guest-bg .b3{left:35%;bottom:-18%;background:#4d8cba;animation-duration:42s;animation-delay:-17s}
+@keyframes guestDrift{
+  0%{transform:translate3d(-5vw,3vh,0) scale(.95)}
+  50%{transform:translate3d(8vw,-5vh,0) scale(1.18)}
+  100%{transform:translate3d(-2vw,7vh,0) scale(.9)}
+}
+#guestQr{position:absolute;right:6vw;bottom:5vh;z-index:3;width:28vh;display:flex;flex-direction:column;align-items:center;gap:1vh;color:var(--dim);font-size:1.35vh;letter-spacing:.08em;text-align:center}
+#guestQrBox{width:24vh;height:24vh;padding:1.2vh;border-radius:1.5vh;background:#fff;box-sizing:border-box}
+#guestQrBox svg{display:block;width:100%;height:100%}
+#guestQr.hide{display:none}
+</style>
+</head>
+<body>
+<div id="ambientGlow"></div>
+<div class="dayribbon" id="dayribbon">
+  <div class="ribbon-track"><div class="ribbon-blocks" id="ribbonBlocks"></div><div class="ribbon-now" id="ribbonNow"></div></div>
+</div>
+<div id="net">&#9679; offline</div>
+<div id="bat"></div>
+<div class="grid">
+  <section class="tile" id="timeTile">
+    <div class="hd">
+      <div class="label">Time / swipe to switch</div>
+      <div id="timerBadge"></div>
+    </div>
+    <div class="stage" id="stage"></div>
+    <div class="nextev" id="nextev"></div>
+    <button class="advice" id="advice" aria-label="Suggested action"></button>
+  </section>
+
+  <section class="tile" id="spotifyTile">
+    <div class="hd"><div class="label">Spotify / Mac<span class="stale" id="sts"></span></div><div class="pill"><button id="pls">Playlists</button><button id="lyrBtn">Lyrics</button><button id="upn">Up next</button></div></div>
+    <div class="meeting-banner" id="meetingBanner">
+      <div><div class="ml">Meeting mode</div><div class="mt" id="meetingTitle"></div></div>
+      <div class="mc" id="meetingTime"></div>
+    </div>
+    <div class="music">
+      <div class="mleft">
+        <div class="np">
+          <img id="art" alt="">
+          <div class="meta"><div id="title"></div><div id="artist"></div><div id="msg"></div><div id="devmenu"></div><div id="aout"><span id="aname"></span><input id="avol" type="range" min="0" max="100" step="1"></div><div id="amenu"></div></div>
+        </div>
+        <div>
+          <div class="times"><span id="tcur">0:00</span><span id="ttot">0:00</span></div>
+          <div class="pbar" id="pbar"><div class="ptrack" id="ptrack"><div class="pfill" id="pfill"></div><div class="pthumb" id="pthumb"></div></div></div>
+        </div>
+        <div class="ctl">
+          <button id="shuf" class="sm" aria-label="Shuffle"><svg viewBox="0 0 24 24"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg></button>
+          <button id="prev" aria-label="Previous"><svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zM9.5 12L18 6v12z"/></svg></button>
+          <button id="pp" aria-label="Play or pause"></button>
+          <button id="next" aria-label="Next"><svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM6 18V6l8.5 6z"/></svg></button>
+          <button id="rep" class="sm" aria-label="Repeat"><svg viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg><span id="one">1</span></button>
+        </div>
+      </div>
+      <div class="mright">
+        <div class="vlab" id="vlab">0</div>
+        <div class="vbar" id="vbar"><div class="vtrack" id="vtrack"><div class="vfill" id="vfill"></div><div class="vthumb" id="vthumb"></div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="tile">
+    <div class="hd">
+      <div class="label">Calendar<span class="stale" id="stc"></span></div>
+      <div class="pill"><button id="cmn" class="on">Month</button><button id="cag">Agenda</button></div>
+    </div>
+    <div class="cal" id="calm">
+      <div class="cleft">
+        <div class="chd">
+          <button class="cnav" id="cprev" aria-label="Previous month">&#8249;</button>
+          <button class="cmon" id="cmon"></button>
+          <button class="cnav" id="cnext" aria-label="Next month">&#8250;</button>
+        </div>
+        <div class="cwk"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+        <div id="cgrid"></div>
+      </div>
+      <div class="cright">
+        <div id="cdate"></div>
+        <div id="clist"></div>
+      </div>
+    </div>
+    <div id="ag" style="display:none"></div>
+  </section>
+
+  <section class="tile">
+    <div class="hd">
+      <div class="label"><span id="wlab">Weather</span><span class="stale" id="stw"></span></div>
+      <div class="pill"><button id="bn" class="on">Now</button><button id="bd">Daily</button><button id="bh">Hourly</button></div>
+    </div>
+    <div class="wnow" id="wnow">
+      <div class="wl">
+        <div class="big" id="temp">--°</div>
+        <div class="cond"><span id="wicon"></span><span id="cond">loading</span></div>
+      </div>
+      <div class="wr">
+        <div class="row"><span>Feels like</span><span id="feels">--</span></div>
+        <div class="row"><span>Humidity</span><span id="hum">--</span></div>
+        <div class="row"><span>Wind</span><span id="wind">--</span></div>
+        <div class="row"><span>Air quality</span><span id="aq">--</span></div>
+      </div>
+    </div>
+    <div id="fc" style="display:none"></div>
+    <div class="hours" id="hr" style="display:none"></div>
+  </section>
+</div>
+
+<div id="edge"></div>
+<div id="scrim"></div>
+<div id="sheet">
+  <div class="sh-hd">
+    <div class="label" id="shTitle">Settings</div>
+    <button class="x" id="sx" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+
+  <div class="setpage" id="set-home">
+    <div class="srow cat" data-kind="category" data-page="appearance"><span>Appearance</span><button class="sel">Theme, night, ribbon ›</button></div>
+    <div class="srow cat" data-kind="category" data-page="clocks"><span>Clocks &amp; weather</span><button class="sel">Locations ›</button></div>
+    <div class="srow cat" data-kind="category" data-page="sound"><span>Sound &amp; focus</span><button class="sel">Timers, meetings ›</button></div>
+    <div class="srow cat" data-kind="category" data-page="display"><span>Display</span><button class="sel">Brightness ›</button></div>
+    <div class="srow cat" data-kind="category" data-page="network"><span>Network</span><button class="sel">Wi-Fi, SSH ›</button></div>
+    <div class="srow cat" data-kind="category" data-page="system"><span>System</span><button class="sel">Health, power ›</button></div>
+    <div class="srow" data-kind="toggle"><span>Day ribbon</span><button class="sel" id="ribbonQuick">Off</button></div>
+    <div class="srow"><span>Guest mode</span><button class="sel" id="guestSel">Start</button></div>
+  </div>
+
+  <div class="setpage" id="set-appearance" hidden>
+    <div class="srow backrow" data-kind="back" data-back="home"><span>Appearance</span><button class="sel">‹ Back</button></div>
+    <div class="srow"><span>Theme</span><div class="pill"><button id="tl">Light</button><button id="ta">Auto</button><button id="td">Dark</button></div></div>
+    <div class="srow" data-kind="toggle"><span>Day / night UI</span><button class="sel" id="nightT">On</button></div>
+    <div class="srow" data-kind="toggle"><span>Auto-dim after sunset</span><button class="sel" id="autoDimT">Off</button></div>
+    <div class="srow"><span>Night brightness</span><button class="sel" id="nightPct">25%</button></div>
+    <div class="srow"><span>Idle dim</span><button class="sel" id="idleSel">10 min</button></div>
+    <div class="srow" data-kind="toggle"><span>Day ribbon</span><button class="sel" id="ribbonT">Off</button></div>
+    <div class="srow" data-kind="toggle"><span>Album ambience</span><button class="sel" id="ambientT">On</button></div>
+    <div class="srow" data-kind="ambience"><span>Ambience amount</span><div class="bsl"><div class="bval" id="ambVal">35%</div><div id="ambBar"><div class="btrack" id="ambTrack"><div class="bfill" id="ambFill"></div><div class="bthumb" id="ambThumb"></div></div></div></div></div>
+    <div class="srow" data-kind="toggle"><span>Morning brief</span><button class="sel" id="briefT">On</button></div>
+    <div class="srow" data-kind="action"><span>Test morning brief</span><button class="sel" id="testBrief">Show now</button></div>
+  </div>
+
+  <div class="setpage" id="set-clocks" hidden>
+    <div class="srow backrow" data-kind="back" data-back="home"><span>Clocks &amp; weather</span><button class="sel">‹ Back</button></div>
+    <div class="srow"><span>Clock 1</span><button class="sel" id="c0"></button></div>
+    <div class="srow"><span>Clock 2</span><button class="sel" id="c1"></button></div>
+    <div class="srow"><span>Clock 3</span><button class="sel" id="c2"></button></div>
+    <div class="srow"><span>Weather</span><button class="sel" id="wsel"></button></div>
+    <div class="srow" data-kind="action"><span>Second hand</span><button class="sel" id="secondSel">Smooth</button></div>
+    <div class="srow"><span>Refresh all data</span><button class="sel" id="rfs">Refresh</button></div>
+  </div>
+
+  <div class="setpage" id="set-sound" hidden>
+    <div class="srow backrow" data-kind="back" data-back="home"><span>Sound &amp; focus</span><button class="sel">‹ Back</button></div>
+    <div class="srow" data-kind="toggle"><span>Meeting auto-pause</span><button class="sel" id="meetT">On</button></div>
+    <div class="srow"><span>Focus length</span><button class="sel" id="focusLenSel">25 min</button></div>
+    <div class="srow" data-kind="action"><span>Lyrics sync</span><button class="sel" id="lyricsOffsetSel">0.0s</button></div>
+    <div class="srow"><span>Start focus now</span><button class="sel" id="focusNow">Start</button></div>
+    <div class="srow"><span>Sleep timer</span><button class="sel" id="sleepSel">Set timer</button></div>
+    <div class="srow"><span>Wake time</span><button class="sel" id="wakeSel">Off</button></div>
+    <div class="srow" data-kind="toggle"><span>Resume music at wake</span><button class="sel" id="wakeResumeT">Off</button></div>
+    <div class="srow"><span>Cancel focus / sleep</span><button class="sel" id="cancelTimers">Cancel</button></div>
+  </div>
+
+  <div class="setpage" id="set-display" hidden>
+    <div class="srow backrow" data-kind="back" data-back="home"><span>Display</span><button class="sel">‹ Back</button></div>
+    <div class="srow"><span>Brightness</span><div class="bsl"><div class="bval" id="bval">--</div><div id="bbar"><div class="btrack" id="btrack"><div class="bfill" id="bfill"></div><div class="bthumb" id="bthumb"></div></div></div></div></div>
+  </div>
+
+  <div class="setpage" id="set-network" hidden>
+    <div class="srow backrow" data-kind="back" data-back="home"><span>Network</span><button class="sel">‹ Back</button></div>
+    <div class="srow" data-kind="wifi"><span>Wi-Fi</span><div class="netv" id="netv">--</div></div>
+    <div class="srow"><span>SSH</span><div class="netv" id="sshv">--</div></div>
+  </div>
+
+  <div class="setpage" id="set-system" hidden>
+    <div class="srow backrow" data-kind="back" data-back="home"><span>System</span><button class="sel">‹ Back</button></div>
+    <div class="srow"><span>System health</span><button class="sel" id="healthBtn">Open</button></div>
+    <div class="srow"><span>Restart Chromium</span><button class="sel" id="restartKiosk">Restart</button></div>
+    <div class="srow"><span>Power</span><button class="sel" id="pwr">Shut down</button></div>
+  </div>
+</div>
+<div id="picker"><div class="pbox"><div class="label" id="ptitle"></div><div id="plist"></div></div></div>
+<div id="focusScreen" class="vscreen">
+  <div class="vk" id="focusKicker">Focus</div>
+  <div class="vcenter">
+    <div class="vtimer" id="focusTimer">25:00</div>
+    <div class="vsub" id="focusSub">Swipe to the Spotify tile if you want to choose music.</div>
+    <div class="vtip">Tap anywhere to end focus</div>
+  </div>
+</div>
+<div id="lyricsScreen" class="vscreen">
+  <div class="lyrics-progress" id="lyricsProgress"><div class="lyrics-progress-fill" id="lyricsProgressFill"></div><div class="lyrics-progress-thumb" id="lyricsProgressThumb"></div></div>
+  <div class="lyrics-time" id="lyricsTime">0:00 / 0:00</div>
+  <div class="lyrics-volume" id="lyricsVolume"><div class="lyrics-volume-fill" id="lyricsVolumeFill"></div></div>
+  <button class="vx" id="lyricsClose">×</button>
+  <div class="lyr-head">
+    <img class="lyr-art" id="lyrArt" alt="">
+    <div class="lyr-meta"><div class="vk">Live lyrics</div><div class="vh" id="lyrTitle">Nothing playing</div><div class="vsub" id="lyrArtist"></div></div>
+  </div>
+  <div id="lyricsBox"><div id="lyricsLines"></div></div>
+  <div class="vtip">Swipe up/down to scroll · top corners skip tracks · tap anywhere to close</div>
+</div>
+<div id="briefScreen" class="vscreen">
+  <div class="vk" id="briefGreeting">Good morning</div>
+  <div class="vh" id="briefDate"></div>
+  <div class="brief-grid" id="briefGrid"></div>
+  <div class="brief-advice" id="briefAdvice"></div>
+  <div class="brief-fact"><div class="k">Fun fact of the day</div><div id="briefFact"></div></div>
+  <div class="vtip">Tap anywhere to start your day</div>
+</div>
+<div id="healthScreen" class="vscreen">
+  <button class="vx" id="healthClose">×</button>
+  <div class="vk">Vesper system</div>
+  <div class="vh">System health</div>
+  <div class="vsub" id="healthUpdated">Reading metrics…</div>
+  <div class="health-grid" id="healthGrid"></div>
+  <div class="vtip">Tap anywhere to close</div>
+</div>
+<div id="guestScreen" class="vscreen">
+  <div class="guest-bg"><span class="b1"></span><span class="b2"></span><span class="b3"></span></div>
+  <div class="guest-content">
+    <div class="vk">Guest mode</div>
+    <div class="vcenter" style="align-items:flex-start;text-align:left">
+      <div class="guest-welcome">Welcome.</div>
+      <div class="guest-sub">Make yourself at home. Music is ready on the desk.</div>
+      <div class="guest-grid">
+        <div>Local time<b id="guestTime">--:--</b></div>
+        <div>Weather<b id="guestWeather">--</b></div>
+        <div>Wi-Fi<b id="guestWifi">--</b></div>
+      </div>
+      <div class="vtip" id="guestTip" style="margin-top:7vh">Tap to play/pause · four-finger swipe up to exit</div>
+    </div>
+  </div>
+  <div id="guestQr" class="hide"><div id="guestQrBox"></div><div id="guestQrLabel">Scan to join Wi-Fi</div></div>
+</div>
+<div id="idleScreen" class="vscreen">
+  <div id="idleClock">--:--</div>
+  <div id="idleDate"></div>
+  <div id="idleWeather"></div>
+</div>
+<div id="toast"></div>
+
+<script>
+/* qrcode-generator 1.4.4, MIT, Kazuhiko Arase; bundled locally for guest Wi-Fi QR. */
+/**
+ * Minified by jsDelivr using Terser v5.37.0.
+ * Original file: /npm/qrcode-generator@1.4.4/qrcode.js
+ *
+ * Do NOT use SRI with dynamically generated files! More information: https://www.jsdelivr.com/using-sri-with-dynamic-files
+ */
+var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],f={},c=function(t,r){o=function(t){for(var r=new Array(t),e=0;e<t;e+=1){r[e]=new Array(t);for(var n=0;n<t;n+=1)r[e][n]=null}return r}(i=4*e+17),l(0,0),l(i-7,0),l(0,i-7),s(),h(),d(t,r),e>=7&&v(t),null==a&&(a=p(e,n,u)),w(a,r)},l=function(t,r){for(var e=-1;e<=7;e+=1)if(!(t+e<=-1||i<=t+e))for(var n=-1;n<=7;n+=1)r+n<=-1||i<=r+n||(o[t+e][r+n]=0<=e&&e<=6&&(0==n||6==n)||0<=n&&n<=6&&(0==e||6==e)||2<=e&&e<=4&&2<=n&&n<=4)},h=function(){for(var t=8;t<i-8;t+=1)null==o[t][6]&&(o[t][6]=t%2==0);for(var r=8;r<i-8;r+=1)null==o[6][r]&&(o[6][r]=r%2==0)},s=function(){for(var t=B.getPatternPosition(e),r=0;r<t.length;r+=1)for(var n=0;n<t.length;n+=1){var i=t[r],a=t[n];if(null==o[i][a])for(var u=-2;u<=2;u+=1)for(var f=-2;f<=2;f+=1)o[i+u][a+f]=-2==u||2==u||-2==f||2==f||0==u&&0==f}},v=function(t){for(var r=B.getBCHTypeNumber(e),n=0;n<18;n+=1){var a=!t&&1==(r>>n&1);o[Math.floor(n/3)][n%3+i-8-3]=a}for(n=0;n<18;n+=1){a=!t&&1==(r>>n&1);o[n%3+i-8-3][Math.floor(n/3)]=a}},d=function(t,r){for(var e=n<<3|r,a=B.getBCHTypeInfo(e),u=0;u<15;u+=1){var f=!t&&1==(a>>u&1);u<6?o[u][8]=f:u<8?o[u+1][8]=f:o[i-15+u][8]=f}for(u=0;u<15;u+=1){f=!t&&1==(a>>u&1);u<8?o[8][i-u-1]=f:u<9?o[8][15-u-1+1]=f:o[8][15-u-1]=f}o[i-8][8]=!t},w=function(t,r){for(var e=-1,n=i-1,a=7,u=0,f=B.getMaskFunction(r),c=i-1;c>0;c-=2)for(6==c&&(c-=1);;){for(var g=0;g<2;g+=1)if(null==o[n][c-g]){var l=!1;u<t.length&&(l=1==(t[u]>>>a&1)),f(n,c-g)&&(l=!l),o[n][c-g]=l,-1==(a-=1)&&(u+=1,a=7)}if((n+=e)<0||i<=n){n-=e,e=-e;break}}},p=function(t,r,e){for(var n=A.getRSBlocks(t,r),o=b(),i=0;i<e.length;i+=1){var a=e[i];o.put(a.getMode(),4),o.put(a.getLength(),B.getLengthInBits(a.getMode(),t)),a.write(o)}var u=0;for(i=0;i<n.length;i+=1)u+=n[i].dataCount;if(o.getLengthInBits()>8*u)throw"code length overflow. ("+o.getLengthInBits()+">"+8*u+")";for(o.getLengthInBits()+4<=8*u&&o.put(0,4);o.getLengthInBits()%8!=0;)o.putBit(!1);for(;!(o.getLengthInBits()>=8*u||(o.put(236,8),o.getLengthInBits()>=8*u));)o.put(17,8);return function(t,r){for(var e=0,n=0,o=0,i=new Array(r.length),a=new Array(r.length),u=0;u<r.length;u+=1){var f=r[u].dataCount,c=r[u].totalCount-f;n=Math.max(n,f),o=Math.max(o,c),i[u]=new Array(f);for(var g=0;g<i[u].length;g+=1)i[u][g]=255&t.getBuffer()[g+e];e+=f;var l=B.getErrorCorrectPolynomial(c),h=k(i[u],l.getLength()-1).mod(l);for(a[u]=new Array(l.getLength()-1),g=0;g<a[u].length;g+=1){var s=g+h.getLength()-a[u].length;a[u][g]=s>=0?h.getAt(s):0}}var v=0;for(g=0;g<r.length;g+=1)v+=r[g].totalCount;var d=new Array(v),w=0;for(g=0;g<n;g+=1)for(u=0;u<r.length;u+=1)g<i[u].length&&(d[w]=i[u][g],w+=1);for(g=0;g<o;g+=1)for(u=0;u<r.length;u+=1)g<a[u].length&&(d[w]=a[u][g],w+=1);return d}(o,n)};f.addData=function(t,r){var e=null;switch(r=r||"Byte"){case"Numeric":e=M(t);break;case"Alphanumeric":e=x(t);break;case"Byte":e=m(t);break;case"Kanji":e=L(t);break;default:throw"mode:"+r}u.push(e),a=null},f.isDark=function(t,r){if(t<0||i<=t||r<0||i<=r)throw t+","+r;return o[t][r]},f.getModuleCount=function(){return i},f.make=function(){if(e<1){for(var t=1;t<40;t++){for(var r=A.getRSBlocks(t,n),o=b(),i=0;i<u.length;i++){var a=u[i];o.put(a.getMode(),4),o.put(a.getLength(),B.getLengthInBits(a.getMode(),t)),a.write(o)}var g=0;for(i=0;i<r.length;i++)g+=r[i].dataCount;if(o.getLengthInBits()<=8*g)break}e=t}c(!1,function(){for(var t=0,r=0,e=0;e<8;e+=1){c(!0,e);var n=B.getLostPoint(f);(0==e||t>n)&&(t=n,r=e)}return r}())},f.createTableTag=function(t,r){t=t||2;var e="";e+='<table style="',e+=" border-width: 0px; border-style: none;",e+=" border-collapse: collapse;",e+=" padding: 0px; margin: "+(r=void 0===r?4*t:r)+"px;",e+='">',e+="<tbody>";for(var n=0;n<f.getModuleCount();n+=1){e+="<tr>";for(var o=0;o<f.getModuleCount();o+=1)e+='<td style="',e+=" border-width: 0px; border-style: none;",e+=" border-collapse: collapse;",e+=" padding: 0px; margin: 0px;",e+=" width: "+t+"px;",e+=" height: "+t+"px;",e+=" background-color: ",e+=f.isDark(n,o)?"#000000":"#ffffff",e+=";",e+='"/>';e+="</tr>"}return e+="</tbody>",e+="</table>"},f.createSvgTag=function(t,r,e,n){var o={};"object"==typeof arguments[0]&&(t=(o=arguments[0]).cellSize,r=o.margin,e=o.alt,n=o.title),t=t||2,r=void 0===r?4*t:r,(e="string"==typeof e?{text:e}:e||{}).text=e.text||null,e.id=e.text?e.id||"qrcode-description":null,(n="string"==typeof n?{text:n}:n||{}).text=n.text||null,n.id=n.text?n.id||"qrcode-title":null;var i,a,u,c,g=f.getModuleCount()*t+2*r,l="";for(c="l"+t+",0 0,"+t+" -"+t+",0 0,-"+t+"z ",l+='<svg version="1.1" xmlns="http://www.w3.org/2000/svg"',l+=o.scalable?"":' width="'+g+'px" height="'+g+'px"',l+=' viewBox="0 0 '+g+" "+g+'" ',l+=' preserveAspectRatio="xMinYMin meet"',l+=n.text||e.text?' role="img" aria-labelledby="'+y([n.id,e.id].join(" ").trim())+'"':"",l+=">",l+=n.text?'<title id="'+y(n.id)+'">'+y(n.text)+"</title>":"",l+=e.text?'<description id="'+y(e.id)+'">'+y(e.text)+"</description>":"",l+='<rect width="100%" height="100%" fill="white" cx="0" cy="0"/>',l+='<path d="',a=0;a<f.getModuleCount();a+=1)for(u=a*t+r,i=0;i<f.getModuleCount();i+=1)f.isDark(a,i)&&(l+="M"+(i*t+r)+","+u+c);return l+='" stroke="transparent" fill="black"/>',l+="</svg>"},f.createDataURL=function(t,r){t=t||2,r=void 0===r?4*t:r;var e=f.getModuleCount()*t+2*r,n=r,o=e-r;return I(e,e,(function(r,e){if(n<=r&&r<o&&n<=e&&e<o){var i=Math.floor((r-n)/t),a=Math.floor((e-n)/t);return f.isDark(a,i)?0:1}return 1}))},f.createImgTag=function(t,r,e){t=t||2,r=void 0===r?4*t:r;var n=f.getModuleCount()*t+2*r,o="";return o+="<img",o+=' src="',o+=f.createDataURL(t,r),o+='"',o+=' width="',o+=n,o+='"',o+=' height="',o+=n,o+='"',e&&(o+=' alt="',o+=y(e),o+='"'),o+="/>"};var y=function(t){for(var r="",e=0;e<t.length;e+=1){var n=t.charAt(e);switch(n){case"<":r+="&lt;";break;case">":r+="&gt;";break;case"&":r+="&amp;";break;case'"':r+="&quot;";break;default:r+=n}}return r};return f.createASCII=function(t,r){if((t=t||1)<2)return function(t){t=void 0===t?2:t;var r,e,n,o,i,a=1*f.getModuleCount()+2*t,u=t,c=a-t,g={"██":"█","█ ":"▀"," █":"▄","  ":" "},l={"██":"▀","█ ":"▀"," █":" ","  ":" "},h="";for(r=0;r<a;r+=2){for(n=Math.floor((r-u)/1),o=Math.floor((r+1-u)/1),e=0;e<a;e+=1)i="█",u<=e&&e<c&&u<=r&&r<c&&f.isDark(n,Math.floor((e-u)/1))&&(i=" "),u<=e&&e<c&&u<=r+1&&r+1<c&&f.isDark(o,Math.floor((e-u)/1))?i+=" ":i+="█",h+=t<1&&r+1>=c?l[i]:g[i];h+="\n"}return a%2&&t>0?h.substring(0,h.length-a-1)+Array(a+1).join("▀"):h.substring(0,h.length-1)}(r);t-=1,r=void 0===r?2*t:r;var e,n,o,i,a=f.getModuleCount()*t+2*r,u=r,c=a-r,g=Array(t+1).join("██"),l=Array(t+1).join("  "),h="",s="";for(e=0;e<a;e+=1){for(o=Math.floor((e-u)/t),s="",n=0;n<a;n+=1)i=1,u<=n&&n<c&&u<=e&&e<c&&f.isDark(o,Math.floor((n-u)/t))&&(i=0),s+=i?g:l;for(o=0;o<t;o+=1)h+=s+"\n"}return h.substring(0,h.length-1)},f.renderTo2dContext=function(t,r){r=r||2;for(var e=f.getModuleCount(),n=0;n<e;n++)for(var o=0;o<e;o++)t.fillStyle=f.isDark(n,o)?"black":"white",t.fillRect(n*r,o*r,r,r)},f};t.stringToBytes=(t.stringToBytesFuncs={default:function(t){for(var r=[],e=0;e<t.length;e+=1){var n=t.charCodeAt(e);r.push(255&n)}return r}}).default,t.createStringToBytes=function(t,r){var e=function(){for(var e=S(t),n=function(){var t=e.read();if(-1==t)throw"eof";return t},o=0,i={};;){var a=e.read();if(-1==a)break;var u=n(),f=n()<<8|n();i[String.fromCharCode(a<<8|u)]=f,o+=1}if(o!=r)throw o+" != "+r;return i}(),n="?".charCodeAt(0);return function(t){for(var r=[],o=0;o<t.length;o+=1){var i=t.charCodeAt(o);if(i<128)r.push(i);else{var a=e[t.charAt(o)];"number"==typeof a?(255&a)==a?r.push(a):(r.push(a>>>8),r.push(255&a)):r.push(n)}}return r}};var r,e,n,o,i,a=1,u=2,f=4,c=8,g={L:1,M:0,Q:3,H:2},l=0,h=1,s=2,v=3,d=4,w=5,p=6,y=7,B=(r=[[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50],[6,30,54],[6,32,58],[6,34,62],[6,26,46,66],[6,26,48,70],[6,26,50,74],[6,30,54,78],[6,30,56,82],[6,30,58,86],[6,34,62,90],[6,28,50,72,94],[6,26,50,74,98],[6,30,54,78,102],[6,28,54,80,106],[6,32,58,84,110],[6,30,58,86,114],[6,34,62,90,118],[6,26,50,74,98,122],[6,30,54,78,102,126],[6,26,52,78,104,130],[6,30,56,82,108,134],[6,34,60,86,112,138],[6,30,58,86,114,142],[6,34,62,90,118,146],[6,30,54,78,102,126,150],[6,24,50,76,102,128,154],[6,28,54,80,106,132,158],[6,32,58,84,110,136,162],[6,26,54,82,110,138,166],[6,30,58,86,114,142,170]],e=1335,n=7973,i=function(t){for(var r=0;0!=t;)r+=1,t>>>=1;return r},(o={}).getBCHTypeInfo=function(t){for(var r=t<<10;i(r)-i(e)>=0;)r^=e<<i(r)-i(e);return 21522^(t<<10|r)},o.getBCHTypeNumber=function(t){for(var r=t<<12;i(r)-i(n)>=0;)r^=n<<i(r)-i(n);return t<<12|r},o.getPatternPosition=function(t){return r[t-1]},o.getMaskFunction=function(t){switch(t){case l:return function(t,r){return(t+r)%2==0};case h:return function(t,r){return t%2==0};case s:return function(t,r){return r%3==0};case v:return function(t,r){return(t+r)%3==0};case d:return function(t,r){return(Math.floor(t/2)+Math.floor(r/3))%2==0};case w:return function(t,r){return t*r%2+t*r%3==0};case p:return function(t,r){return(t*r%2+t*r%3)%2==0};case y:return function(t,r){return(t*r%3+(t+r)%2)%2==0};default:throw"bad maskPattern:"+t}},o.getErrorCorrectPolynomial=function(t){for(var r=k([1],0),e=0;e<t;e+=1)r=r.multiply(k([1,C.gexp(e)],0));return r},o.getLengthInBits=function(t,r){if(1<=r&&r<10)switch(t){case a:return 10;case u:return 9;case f:case c:return 8;default:throw"mode:"+t}else if(r<27)switch(t){case a:return 12;case u:return 11;case f:return 16;case c:return 10;default:throw"mode:"+t}else{if(!(r<41))throw"type:"+r;switch(t){case a:return 14;case u:return 13;case f:return 16;case c:return 12;default:throw"mode:"+t}}},o.getLostPoint=function(t){for(var r=t.getModuleCount(),e=0,n=0;n<r;n+=1)for(var o=0;o<r;o+=1){for(var i=0,a=t.isDark(n,o),u=-1;u<=1;u+=1)if(!(n+u<0||r<=n+u))for(var f=-1;f<=1;f+=1)o+f<0||r<=o+f||0==u&&0==f||a==t.isDark(n+u,o+f)&&(i+=1);i>5&&(e+=3+i-5)}for(n=0;n<r-1;n+=1)for(o=0;o<r-1;o+=1){var c=0;t.isDark(n,o)&&(c+=1),t.isDark(n+1,o)&&(c+=1),t.isDark(n,o+1)&&(c+=1),t.isDark(n+1,o+1)&&(c+=1),0!=c&&4!=c||(e+=3)}for(n=0;n<r;n+=1)for(o=0;o<r-6;o+=1)t.isDark(n,o)&&!t.isDark(n,o+1)&&t.isDark(n,o+2)&&t.isDark(n,o+3)&&t.isDark(n,o+4)&&!t.isDark(n,o+5)&&t.isDark(n,o+6)&&(e+=40);for(o=0;o<r;o+=1)for(n=0;n<r-6;n+=1)t.isDark(n,o)&&!t.isDark(n+1,o)&&t.isDark(n+2,o)&&t.isDark(n+3,o)&&t.isDark(n+4,o)&&!t.isDark(n+5,o)&&t.isDark(n+6,o)&&(e+=40);var g=0;for(o=0;o<r;o+=1)for(n=0;n<r;n+=1)t.isDark(n,o)&&(g+=1);return e+=Math.abs(100*g/r/r-50)/5*10},o),C=function(){for(var t=new Array(256),r=new Array(256),e=0;e<8;e+=1)t[e]=1<<e;for(e=8;e<256;e+=1)t[e]=t[e-4]^t[e-5]^t[e-6]^t[e-8];for(e=0;e<255;e+=1)r[t[e]]=e;var n={glog:function(t){if(t<1)throw"glog("+t+")";return r[t]},gexp:function(r){for(;r<0;)r+=255;for(;r>=256;)r-=255;return t[r]}};return n}();function k(t,r){if(void 0===t.length)throw t.length+"/"+r;var e=function(){for(var e=0;e<t.length&&0==t[e];)e+=1;for(var n=new Array(t.length-e+r),o=0;o<t.length-e;o+=1)n[o]=t[o+e];return n}(),n={getAt:function(t){return e[t]},getLength:function(){return e.length},multiply:function(t){for(var r=new Array(n.getLength()+t.getLength()-1),e=0;e<n.getLength();e+=1)for(var o=0;o<t.getLength();o+=1)r[e+o]^=C.gexp(C.glog(n.getAt(e))+C.glog(t.getAt(o)));return k(r,0)},mod:function(t){if(n.getLength()-t.getLength()<0)return n;for(var r=C.glog(n.getAt(0))-C.glog(t.getAt(0)),e=new Array(n.getLength()),o=0;o<n.getLength();o+=1)e[o]=n.getAt(o);for(o=0;o<t.getLength();o+=1)e[o]^=C.gexp(C.glog(t.getAt(o))+r);return k(e,0).mod(t)}};return n}var A=function(){var t=[[1,26,19],[1,26,16],[1,26,13],[1,26,9],[1,44,34],[1,44,28],[1,44,22],[1,44,16],[1,70,55],[1,70,44],[2,35,17],[2,35,13],[1,100,80],[2,50,32],[2,50,24],[4,25,9],[1,134,108],[2,67,43],[2,33,15,2,34,16],[2,33,11,2,34,12],[2,86,68],[4,43,27],[4,43,19],[4,43,15],[2,98,78],[4,49,31],[2,32,14,4,33,15],[4,39,13,1,40,14],[2,121,97],[2,60,38,2,61,39],[4,40,18,2,41,19],[4,40,14,2,41,15],[2,146,116],[3,58,36,2,59,37],[4,36,16,4,37,17],[4,36,12,4,37,13],[2,86,68,2,87,69],[4,69,43,1,70,44],[6,43,19,2,44,20],[6,43,15,2,44,16],[4,101,81],[1,80,50,4,81,51],[4,50,22,4,51,23],[3,36,12,8,37,13],[2,116,92,2,117,93],[6,58,36,2,59,37],[4,46,20,6,47,21],[7,42,14,4,43,15],[4,133,107],[8,59,37,1,60,38],[8,44,20,4,45,21],[12,33,11,4,34,12],[3,145,115,1,146,116],[4,64,40,5,65,41],[11,36,16,5,37,17],[11,36,12,5,37,13],[5,109,87,1,110,88],[5,65,41,5,66,42],[5,54,24,7,55,25],[11,36,12,7,37,13],[5,122,98,1,123,99],[7,73,45,3,74,46],[15,43,19,2,44,20],[3,45,15,13,46,16],[1,135,107,5,136,108],[10,74,46,1,75,47],[1,50,22,15,51,23],[2,42,14,17,43,15],[5,150,120,1,151,121],[9,69,43,4,70,44],[17,50,22,1,51,23],[2,42,14,19,43,15],[3,141,113,4,142,114],[3,70,44,11,71,45],[17,47,21,4,48,22],[9,39,13,16,40,14],[3,135,107,5,136,108],[3,67,41,13,68,42],[15,54,24,5,55,25],[15,43,15,10,44,16],[4,144,116,4,145,117],[17,68,42],[17,50,22,6,51,23],[19,46,16,6,47,17],[2,139,111,7,140,112],[17,74,46],[7,54,24,16,55,25],[34,37,13],[4,151,121,5,152,122],[4,75,47,14,76,48],[11,54,24,14,55,25],[16,45,15,14,46,16],[6,147,117,4,148,118],[6,73,45,14,74,46],[11,54,24,16,55,25],[30,46,16,2,47,17],[8,132,106,4,133,107],[8,75,47,13,76,48],[7,54,24,22,55,25],[22,45,15,13,46,16],[10,142,114,2,143,115],[19,74,46,4,75,47],[28,50,22,6,51,23],[33,46,16,4,47,17],[8,152,122,4,153,123],[22,73,45,3,74,46],[8,53,23,26,54,24],[12,45,15,28,46,16],[3,147,117,10,148,118],[3,73,45,23,74,46],[4,54,24,31,55,25],[11,45,15,31,46,16],[7,146,116,7,147,117],[21,73,45,7,74,46],[1,53,23,37,54,24],[19,45,15,26,46,16],[5,145,115,10,146,116],[19,75,47,10,76,48],[15,54,24,25,55,25],[23,45,15,25,46,16],[13,145,115,3,146,116],[2,74,46,29,75,47],[42,54,24,1,55,25],[23,45,15,28,46,16],[17,145,115],[10,74,46,23,75,47],[10,54,24,35,55,25],[19,45,15,35,46,16],[17,145,115,1,146,116],[14,74,46,21,75,47],[29,54,24,19,55,25],[11,45,15,46,46,16],[13,145,115,6,146,116],[14,74,46,23,75,47],[44,54,24,7,55,25],[59,46,16,1,47,17],[12,151,121,7,152,122],[12,75,47,26,76,48],[39,54,24,14,55,25],[22,45,15,41,46,16],[6,151,121,14,152,122],[6,75,47,34,76,48],[46,54,24,10,55,25],[2,45,15,64,46,16],[17,152,122,4,153,123],[29,74,46,14,75,47],[49,54,24,10,55,25],[24,45,15,46,46,16],[4,152,122,18,153,123],[13,74,46,32,75,47],[48,54,24,14,55,25],[42,45,15,32,46,16],[20,147,117,4,148,118],[40,75,47,7,76,48],[43,54,24,22,55,25],[10,45,15,67,46,16],[19,148,118,6,149,119],[18,75,47,31,76,48],[34,54,24,34,55,25],[20,45,15,61,46,16]],r=function(t,r){var e={};return e.totalCount=t,e.dataCount=r,e},e={};return e.getRSBlocks=function(e,n){var o=function(r,e){switch(e){case g.L:return t[4*(r-1)+0];case g.M:return t[4*(r-1)+1];case g.Q:return t[4*(r-1)+2];case g.H:return t[4*(r-1)+3];default:return}}(e,n);if(void 0===o)throw"bad rs block @ typeNumber:"+e+"/errorCorrectionLevel:"+n;for(var i=o.length/3,a=[],u=0;u<i;u+=1)for(var f=o[3*u+0],c=o[3*u+1],l=o[3*u+2],h=0;h<f;h+=1)a.push(r(c,l));return a},e}(),b=function(){var t=[],r=0,e={getBuffer:function(){return t},getAt:function(r){var e=Math.floor(r/8);return 1==(t[e]>>>7-r%8&1)},put:function(t,r){for(var n=0;n<r;n+=1)e.putBit(1==(t>>>r-n-1&1))},getLengthInBits:function(){return r},putBit:function(e){var n=Math.floor(r/8);t.length<=n&&t.push(0),e&&(t[n]|=128>>>r%8),r+=1}};return e},M=function(t){var r=a,e=t,n={getMode:function(){return r},getLength:function(t){return e.length},write:function(t){for(var r=e,n=0;n+2<r.length;)t.put(o(r.substring(n,n+3)),10),n+=3;n<r.length&&(r.length-n==1?t.put(o(r.substring(n,n+1)),4):r.length-n==2&&t.put(o(r.substring(n,n+2)),7))}},o=function(t){for(var r=0,e=0;e<t.length;e+=1)r=10*r+i(t.charAt(e));return r},i=function(t){if("0"<=t&&t<="9")return t.charCodeAt(0)-"0".charCodeAt(0);throw"illegal char :"+t};return n},x=function(t){var r=u,e=t,n={getMode:function(){return r},getLength:function(t){return e.length},write:function(t){for(var r=e,n=0;n+1<r.length;)t.put(45*o(r.charAt(n))+o(r.charAt(n+1)),11),n+=2;n<r.length&&t.put(o(r.charAt(n)),6)}},o=function(t){if("0"<=t&&t<="9")return t.charCodeAt(0)-"0".charCodeAt(0);if("A"<=t&&t<="Z")return t.charCodeAt(0)-"A".charCodeAt(0)+10;switch(t){case" ":return 36;case"$":return 37;case"%":return 38;case"*":return 39;case"+":return 40;case"-":return 41;case".":return 42;case"/":return 43;case":":return 44;default:throw"illegal char :"+t}};return n},m=function(r){var e=f,n=t.stringToBytes(r),o={getMode:function(){return e},getLength:function(t){return n.length},write:function(t){for(var r=0;r<n.length;r+=1)t.put(n[r],8)}};return o},L=function(r){var e=c,n=t.stringToBytesFuncs.SJIS;if(!n)throw"sjis not supported.";!function(){var t=n("友");if(2!=t.length||38726!=(t[0]<<8|t[1]))throw"sjis not supported."}();var o=n(r),i={getMode:function(){return e},getLength:function(t){return~~(o.length/2)},write:function(t){for(var r=o,e=0;e+1<r.length;){var n=(255&r[e])<<8|255&r[e+1];if(33088<=n&&n<=40956)n-=33088;else{if(!(57408<=n&&n<=60351))throw"illegal char at "+(e+1)+"/"+n;n-=49472}n=192*(n>>>8&255)+(255&n),t.put(n,13),e+=2}if(e<r.length)throw"illegal char at "+(e+1)}};return i},D=function(){var t=[],r={writeByte:function(r){t.push(255&r)},writeShort:function(t){r.writeByte(t),r.writeByte(t>>>8)},writeBytes:function(t,e,n){e=e||0,n=n||t.length;for(var o=0;o<n;o+=1)r.writeByte(t[o+e])},writeString:function(t){for(var e=0;e<t.length;e+=1)r.writeByte(t.charCodeAt(e))},toByteArray:function(){return t},toString:function(){var r="";r+="[";for(var e=0;e<t.length;e+=1)e>0&&(r+=","),r+=t[e];return r+="]"}};return r},S=function(t){var r=t,e=0,n=0,o=0,i={read:function(){for(;o<8;){if(e>=r.length){if(0==o)return-1;throw"unexpected end of file./"+o}var t=r.charAt(e);if(e+=1,"="==t)return o=0,-1;t.match(/^\s$/)||(n=n<<6|a(t.charCodeAt(0)),o+=6)}var i=n>>>o-8&255;return o-=8,i}},a=function(t){if(65<=t&&t<=90)return t-65;if(97<=t&&t<=122)return t-97+26;if(48<=t&&t<=57)return t-48+52;if(43==t)return 62;if(47==t)return 63;throw"c:"+t};return i},I=function(t,r,e){for(var n=function(t,r){var e=t,n=r,o=new Array(t*r),i={setPixel:function(t,r,n){o[r*e+t]=n},write:function(t){t.writeString("GIF87a"),t.writeShort(e),t.writeShort(n),t.writeByte(128),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(255),t.writeByte(255),t.writeByte(255),t.writeString(","),t.writeShort(0),t.writeShort(0),t.writeShort(e),t.writeShort(n),t.writeByte(0);var r=a(2);t.writeByte(2);for(var o=0;r.length-o>255;)t.writeByte(255),t.writeBytes(r,o,255),o+=255;t.writeByte(r.length-o),t.writeBytes(r,o,r.length-o),t.writeByte(0),t.writeString(";")}},a=function(t){for(var r=1<<t,e=1+(1<<t),n=t+1,i=u(),a=0;a<r;a+=1)i.add(String.fromCharCode(a));i.add(String.fromCharCode(r)),i.add(String.fromCharCode(e));var f,c,g,l=D(),h=(f=l,c=0,g=0,{write:function(t,r){if(t>>>r!=0)throw"length over";for(;c+r>=8;)f.writeByte(255&(t<<c|g)),r-=8-c,t>>>=8-c,g=0,c=0;g|=t<<c,c+=r},flush:function(){c>0&&f.writeByte(g)}});h.write(r,n);var s=0,v=String.fromCharCode(o[s]);for(s+=1;s<o.length;){var d=String.fromCharCode(o[s]);s+=1,i.contains(v+d)?v+=d:(h.write(i.indexOf(v),n),i.size()<4095&&(i.size()==1<<n&&(n+=1),i.add(v+d)),v=d)}return h.write(i.indexOf(v),n),h.write(e,n),h.flush(),l.toByteArray()},u=function(){var t={},r=0,e={add:function(n){if(e.contains(n))throw"dup key:"+n;t[n]=r,r+=1},size:function(){return r},indexOf:function(r){return t[r]},contains:function(r){return void 0!==t[r]}};return e};return i}(t,r),o=0;o<r;o+=1)for(var i=0;i<t;i+=1)n.setPixel(i,o,e(i,o));var a=D();n.write(a);for(var u=function(){var t=0,r=0,e=0,n="",o={},i=function(t){n+=String.fromCharCode(a(63&t))},a=function(t){if(t<0);else{if(t<26)return 65+t;if(t<52)return t-26+97;if(t<62)return t-52+48;if(62==t)return 43;if(63==t)return 47}throw"n:"+t};return o.writeByte=function(n){for(t=t<<8|255&n,r+=8,e+=1;r>=6;)i(t>>>r-6),r-=6},o.flush=function(){if(r>0&&(i(t<<6-r),t=0,r=0),e%3!=0)for(var o=3-e%3,a=0;a<o;a+=1)n+="="},o.toString=function(){return n},o}(),f=a.toByteArray(),c=0;c<f.length;c+=1)u.writeByte(f[c]);return u.flush(),"data:image/gif;base64,"+u};return t}();qrcode.stringToBytesFuncs["UTF-8"]=function(t){return function(t){for(var r=[],e=0;e<t.length;e++){var n=t.charCodeAt(e);n<128?r.push(n):n<2048?r.push(192|n>>6,128|63&n):n<55296||n>=57344?r.push(224|n>>12,128|n>>6&63,128|63&n):(e++,n=65536+((1023&n)<<10|1023&t.charCodeAt(e)),r.push(240|n>>18,128|n>>12&63,128|n>>6&63,128|63&n))}return r}(t)},function(t){"function"==typeof define&&define.amd?define([],t):"object"==typeof exports&&(module.exports=t())}((function(){return qrcode}));
+//# sourceMappingURL=/sm/26b4b0d0b1e283d6b3ec9857ac597d7a60c76ac17be1ef4c965f03086de426bb.map
+</script>
+<script>
+const $ = id => document.getElementById(id);
+const NS = 'http://www.w3.org/2000/svg';
+function el(p, n, a) {
+  const e = document.createElementNS(NS, n);
+  for (const k in a) { const v = String(a[k]); if (v.indexOf('var(') === 0) e.style.setProperty(k, v); else e.setAttribute(k, a[k]); }
+  p.appendChild(e); return e;
+}
+const pad = n => String(n).padStart(2, '0');
+const ymd = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const parseYmd = s => { const a = s.split('-').map(Number); return new Date(a[0], a[1] - 1, a[2]); };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+const tmOf = iso => new Date(iso).toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'});
+const pageStart = Date.now();
+let wOk = 0, spOk = 0, calSrv = 0, calConfigured = false;
+
+// ---- cities: name, time zone, latitude, longitude
+const C = [
+['Phnom Penh','Asia/Phnom_Penh',11.5564,104.9282],['Bangkok','Asia/Bangkok',13.75,100.50],['Hanoi','Asia/Bangkok',21.03,105.85],
+['Ho Chi Minh City','Asia/Ho_Chi_Minh',10.78,106.70],['Singapore','Asia/Singapore',1.35,103.82],['Kuala Lumpur','Asia/Kuala_Lumpur',3.14,101.69],
+['Jakarta','Asia/Jakarta',-6.21,106.85],['Manila','Asia/Manila',14.60,120.98],['Hong Kong','Asia/Hong_Kong',22.32,114.17],
+['Taipei','Asia/Taipei',25.03,121.57],['Shanghai','Asia/Shanghai',31.23,121.47],['Tokyo','Asia/Tokyo',35.68,139.69],
+['Seoul','Asia/Seoul',37.57,126.98],['Delhi','Asia/Kolkata',28.61,77.21],['Dubai','Asia/Dubai',25.20,55.27],
+['Istanbul','Europe/Istanbul',41.01,28.98],['Moscow','Europe/Moscow',55.76,37.62],['Cairo','Africa/Cairo',30.04,31.24],
+['Nairobi','Africa/Nairobi',-1.29,36.82],['Johannesburg','Africa/Johannesburg',-26.20,28.05],['Lagos','Africa/Lagos',6.52,3.38],
+['Berlin','Europe/Berlin',52.52,13.41],['Munich','Europe/Berlin',48.14,11.58],['Frankfurt','Europe/Berlin',50.11,8.68],
+['Hamburg','Europe/Berlin',53.55,9.99],['Vienna','Europe/Vienna',48.21,16.37],['Zurich','Europe/Zurich',47.38,8.54],
+['Paris','Europe/Paris',48.86,2.35],['Madrid','Europe/Madrid',40.42,-3.70],['Rome','Europe/Rome',41.90,12.50],
+['Amsterdam','Europe/Amsterdam',52.37,4.90],['London','Europe/London',51.51,-0.13],['Dublin','Europe/Dublin',53.35,-6.26],
+['Reykjavik','Atlantic/Reykjavik',64.15,-21.94],['New York','America/New_York',40.71,-74.01],['Chicago','America/Chicago',41.88,-87.63],
+['Denver','America/Denver',39.74,-104.99],['Los Angeles','America/Los_Angeles',34.05,-118.24],['Vancouver','America/Vancouver',49.28,-123.12],
+['Mexico City','America/Mexico_City',19.43,-99.13],['Sao Paulo','America/Sao_Paulo',-23.55,-46.63],
+['Buenos Aires','America/Argentina/Buenos_Aires',-34.60,-58.38],['Sydney','Australia/Sydney',-33.8688,151.2093],
+['Melbourne','Australia/Melbourne',-37.81,144.96],['Brisbane','Australia/Brisbane',-27.47,153.03],
+['Perth','Australia/Perth',-31.95,115.86],['Auckland','Pacific/Auckland',-36.85,174.76]
+];
+const byName = n => C.find(c => c[0] === n) || C[0];
+
+// ---- settings (kept in the browser's local storage)
+const DEF = {
+  theme: 'dark', clocks: ['London', 'New York', 'Tokyo'], weather: 'London',
+  nightMode: true, autoDim: false, nightPct: 25, idleDim: 10,
+  ribbon: false, ambient: true, ambientLevel: 35, brief: true, meetingPause: true,
+  focusLen: 25, wakeAt: '', wakeResume: false, lastBrief: '', lastWake: '',
+  guestEnd: 0, focusEnd: 0, sleepEnd: 0, sleepOrigVol: null,
+  secondHand: 'smooth', lyricsOffset: 0
+};
+let S;
+try { S = Object.assign({}, DEF, JSON.parse(localStorage.getItem('desk') || '{}')); } catch (e) { S = Object.assign({}, DEF); }
+if (!Array.isArray(S.clocks) || S.clocks.length !== 3) S.clocks = DEF.clocks.slice();
+const save = () => { try { localStorage.setItem('desk', JSON.stringify(S)); } catch (e) {} };
+// One-time correction: remove the earlier experimental lyric timing offsets.
+// Lyrics from LRCLIB already match playback; the visible problem was scrolling.
+if (!S.featureSchema || S.featureSchema < 3) {
+  if (Number(S.lyricsOffset) === -1.5 || Number(S.lyricsOffset) === 1.5) S.lyricsOffset = 0;
+  S.featureSchema = 3;
+  save();
+}
+const toggleState = (id, on) => {
+  const e = $(id); if (!e) return;
+  e.textContent = on ? 'On' : 'Off';
+  e.classList.toggle('on', !!on);
+};
+function applyTheme() {
+  let t = S.theme;
+  if (t === 'auto') {
+    const h = +ZONES[0].f.formatToParts(new Date()).find(p => p.type === 'hour').value;
+    t = (h >= 6 && h < 18) ? 'light' : 'dark';
+  }
+  document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : 'dark');
+  $('tl').classList.toggle('on', S.theme === 'light');
+  $('ta').classList.toggle('on', S.theme === 'auto');
+  $('td').classList.toggle('on', S.theme !== 'light' && S.theme !== 'auto');
+}
+function refreshSettings() {
+  for (let k = 0; k < 3; k++) $('c' + k).textContent = S.clocks[k];
+  $('wsel').textContent = S.weather;
+  toggleState('nightT', S.nightMode);
+  toggleState('autoDimT', S.autoDim);
+  toggleState('ribbonT', S.ribbon);
+  toggleState('ribbonQuick', S.ribbon);
+  toggleState('ambientT', S.ambient);
+  toggleState('briefT', S.brief);
+  toggleState('meetT', S.meetingPause);
+  toggleState('wakeResumeT', S.wakeResume);
+  $('nightPct').textContent = S.nightPct + '%';
+  $('secondSel').textContent = ({off: 'Off', tick: 'Tick', smooth: 'Smooth'})[S.secondHand] || 'Smooth';
+  $('lyricsOffsetSel').textContent = (S.lyricsOffset > 0 ? '+' : '') + Number(S.lyricsOffset).toFixed(1) + 's';
+  showAmbientValue(S.ambientLevel);
+  $('idleSel').textContent = S.idleDim ? S.idleDim + ' min' : 'Off';
+  $('focusLenSel').textContent = S.focusLen + ' min';
+  $('wakeSel').textContent = S.wakeAt || 'Off';
+  $('sleepSel').textContent = S.sleepEnd > Date.now() ? 'Active' : 'Set timer';
+  $('guestSel').textContent = S.guestEnd > Date.now() ? 'Active' : 'Start';
+  document.body.classList.toggle('ribbon-on', !!S.ribbon);
+  if (typeof renderRibbon === 'function') renderRibbon();
+}
+
+// ---- clocks: three time zones, swipe or tap to choose the big one
+const ZONES = [{}, {}, {}];
+let center = 0;
+const stage = $('stage');
+function setZones() {
+  ZONES.forEach((z, k) => {
+    const c = byName(S.clocks[k]);
+    z.n = c[0]; z.tz = c[1];
+    z.f = new Intl.DateTimeFormat('en-GB', {timeZone: z.tz, hourCycle: 'h23', hour: '2-digit', minute: '2-digit', second: '2-digit', weekday: 'short'});
+  });
+}
+ZONES.forEach(z => {
+  const d = document.createElement('div');
+  d.innerHTML = '<svg viewBox="-100 -100 200 200"></svg><div class="cap"><div class="city"></div><div class="tm"></div><div class="dt"></div></div>';
+  stage.appendChild(d);
+  z.el = d; z.city = d.querySelector('.city'); z.tm = d.querySelector('.tm'); z.dt = d.querySelector('.dt');
+  const s = d.querySelector('svg');
+  el(s, 'circle', {cx: 0, cy: 0, r: 97, fill: 'none', stroke: 'var(--line)', 'stroke-width': 1.5});
+  for (let i = 0; i < 60; i++) {
+    const a = i * 6 * Math.PI / 180, big = i % 5 === 0, r1 = big ? 80 : 90, r2 = 95;
+    el(s, 'line', {x1: Math.sin(a) * r1, y1: -Math.cos(a) * r1, x2: Math.sin(a) * r2, y2: -Math.cos(a) * r2,
+      stroke: big ? 'var(--fg)' : 'var(--dim)', 'stroke-width': big ? 2.5 : 1.2});
+  }
+  z.hh = el(s, 'line', {x1: 0, y1: 6, x2: 0, y2: -50, stroke: 'var(--fg)', 'stroke-width': 5, 'stroke-linecap': 'round'});
+  z.mh = el(s, 'line', {x1: 0, y1: 8, x2: 0, y2: -74, stroke: 'var(--fg)', 'stroke-width': 3.5, 'stroke-linecap': 'round'});
+  z.sh = el(s, 'line', {x1: 0, y1: 14, x2: 0, y2: -82, stroke: 'var(--acc)', 'stroke-width': 2});
+  el(s, 'circle', {cx: 0, cy: 0, r: 4, fill: 'var(--acc)'});
+});
+function layout() { ZONES.forEach((z, k) => { z.el.className = 'clk p' + ((k - center + 3) % 3); }); }
+setZones(); layout();
+const localDay = new Intl.DateTimeFormat('en-GB', {weekday: 'short'});
+function tick() {
+  const now = new Date(), mine = localDay.format(now);
+  ZONES.forEach(z => {
+    const o = {}; z.f.formatToParts(now).forEach(p => { o[p.type] = p.value; });
+    const s = +o.second, m = +o.minute + s / 60, h = (+o.hour % 12) + m / 60;
+    z.sSec = s;
+    z.hh.setAttribute('transform', 'rotate(' + h * 30 + ')');
+    z.mh.setAttribute('transform', 'rotate(' + m * 6 + ')');
+    z.sh.style.display = S.secondHand === 'off' ? 'none' : '';
+    if (S.secondHand !== 'smooth') z.sh.setAttribute('transform', 'rotate(' + s * 6 + ')');
+    z.city.textContent = z.n;
+    z.tm.textContent = o.hour + ':' + o.minute + (o.weekday !== mine ? '  ' + o.weekday : '');
+    z.dt.textContent = now.toLocaleDateString('en-GB', {timeZone: z.tz, weekday: 'long', day: 'numeric', month: 'long'});
+  });
+}
+function smoothSecondHands() {
+  if (S.secondHand !== 'smooth') return;
+  const now = new Date();
+  const sec = now.getSeconds() + now.getMilliseconds() / 1000;
+  ZONES.forEach(z => {
+    z.sh.style.display = '';
+    z.sh.setAttribute('transform', 'rotate(' + (sec * 6) + ')');
+  });
+}
+tick(); setInterval(tick, 1000);
+setInterval(smoothSecondHands, 50);
+let downX = 0, downEl = null;
+stage.addEventListener('pointerdown', e => { downX = e.clientX; downEl = e.target.closest('.clk'); });
+stage.addEventListener('pointerup', e => {
+  const dx = e.clientX - downX;
+  if (Math.abs(dx) > 50) { center = (center + (dx < 0 ? 1 : 2)) % 3; }
+  else if (downEl) { const k = ZONES.findIndex(z => z.el === downEl); if (k >= 0) center = k; }
+  layout();
+});
+
+// ---- weather + air quality (Open-Meteo, no key needed)
+const WC = c => c === 0 ? 'Clear' : c <= 2 ? 'Partly cloudy' : c === 3 ? 'Overcast' : c <= 48 ? 'Fog' :
+  c <= 57 ? 'Drizzle' : c <= 67 ? 'Rain' : c <= 77 ? 'Snow' : c <= 82 ? 'Showers' : c <= 86 ? 'Snow showers' : 'Thunderstorm';
+const AQC = v => v <= 50 ? 'Good' : v <= 100 ? 'Moderate' : v <= 150 ? 'Sensitive' : v <= 200 ? 'Unhealthy' : v <= 300 ? 'Very bad' : 'Hazardous';
+const CLOUDP = 'M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z';
+const SUNP = 'M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4';
+const MOONP = 'M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z';
+const RAINC = 'M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25';
+const P = (d, x) => '<path d="' + d + '"' + (x || '') + '/>';
+function icon(code, day) {
+  let b;
+  if (code === 0) b = day ? P(SUNP) + '<circle cx="12" cy="12" r="4.5"/>' : P(MOONP);
+  else if (code <= 2) b = (day ? '<circle cx="8" cy="8" r="2.8"/>' + P('M8 2v1.5M2 8h1.5M3.8 3.8l1 1M12.2 3.8l-1 1')
+      : P(MOONP, ' transform="translate(1 1) scale(.5)"')) + P(CLOUDP, ' transform="translate(7 8) scale(.68)" style="fill:var(--bg)"');
+  else if (code === 3) b = P(CLOUDP);
+  else if (code <= 48) b = P('M3 8h18M5 12h14M3 16h18M7 20h10');
+  else if (code <= 57) b = P(RAINC) + P('M8 19v2M8 13v2M16 19v2M16 13v2M12 21v2M12 15v2');
+  else if (code <= 67 || (code >= 80 && code <= 82)) b = P(RAINC) + P('M16 13v8M8 13v8M12 15v8');
+  else if (code <= 77 || code === 85 || code === 86) b = P('M20 17.58A5 5 0 0 0 18 8h-1.26A8 8 0 1 0 4 16.25') + P('M8 16h.01M8 20h.01M12 18h.01M12 22h.01M16 16h.01M16 20h.01');
+  else b = P('M19 16.9A5 5 0 0 0 18 7h-1.26a8 8 0 1 0-11.62 9') + P('M13 11l-4 6h6l-4 6');
+  return '<svg class="ic" viewBox="0 0 24 24">' + b + '</svg>';
+}
+const wurl = c => 'https://api.open-meteo.com/v1/forecast?latitude=' + c[2] + '&longitude=' + c[3] +
+  '&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,is_day' +
+  '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset' +
+  '&hourly=temperature_2m,weather_code,precipitation_probability,is_day' +
+  '&forecast_days=7&timezone=auto';
+let WX = null;
+const aurl = c => 'https://air-quality-api.open-meteo.com/v1/air-quality?latitude=' + c[2] + '&longitude=' + c[3] +
+  '&current=us_aqi,pm2_5&timezone=auto';
+function scrollNow() {
+  const n = $('hr').querySelector('.now');
+  if (n) $('hr').scrollLeft = Math.max(0, n.offsetLeft - 10);
+}
+function mode(m) {
+  $('bn').classList.toggle('on', m === 'n');
+  $('bd').classList.toggle('on', m === 'd');
+  $('bh').classList.toggle('on', m === 'h');
+  $('wnow').style.display = m === 'n' ? 'flex' : 'none';
+  $('fc').style.display = m === 'd' ? 'block' : 'none';
+  $('hr').style.display = m === 'h' ? 'flex' : 'none';
+  if (m === 'h') scrollNow();
+}
+$('bn').onclick = () => mode('n');
+$('bd').onclick = () => mode('d');
+$('bh').onclick = () => mode('h');
+let wTok = 0;
+async function loadWeather() {
+  const my = ++wTok, city = byName(S.weather);
+  $('wlab').textContent = 'Weather / ' + city[0];
+  try {
+    const j = await (await fetch(wurl(city))).json();
+    if (my !== wTok) return;
+    const c = j.current, d = j.daily, hr = j.hourly;
+    WX = {city: city[0], current: c, daily: d, hourly: hr, updated: Date.now(),
+          sunrise: d.sunrise && d.sunrise[0], sunset: d.sunset && d.sunset[0], aqi: WX && WX.aqi};
+    $('temp').textContent = Math.round(c.temperature_2m) + '°C';
+    $('cond').textContent = WC(c.weather_code);
+    $('wicon').innerHTML = icon(c.weather_code, c.is_day === 1);
+    $('feels').textContent = Math.round(c.apparent_temperature) + '°C';
+    $('hum').textContent = c.relative_humidity_2m + '%';
+    $('wind').textContent = Math.round(c.wind_speed_10m) + ' km/h';
+    let h = '';
+    for (let i = 0; i < d.time.length; i++) {
+      const day = i === 0 ? 'Today' : new Date(d.time[i] + 'T00:00').toLocaleDateString('en-GB', {weekday: 'short'});
+      h += '<div class="row"><span>' + day + '</span><span>' + WC(d.weather_code[i]) + '</span><span>' +
+        Math.round(d.temperature_2m_max[i]) + '° / ' + Math.round(d.temperature_2m_min[i]) + '°</span><span>' +
+        (d.precipitation_probability_max[i] ?? 0) + '%</span></div>';
+    }
+    $('fc').innerHTML = h;
+    const today = d.time[0], nowH = parseInt(c.time.slice(11, 13), 10);
+    let hs = '';
+    for (let i = 0; i < hr.time.length; i++) {
+      if (hr.time[i].slice(0, 10) !== today) continue;
+      const hour = parseInt(hr.time[i].slice(11, 13), 10);
+      hs += '<div class="h' + (hour === nowH ? ' now' : hour < nowH ? ' past' : '') + '">' +
+        '<div class="t">' + String(hour).padStart(2, '0') + ':00</div>' +
+        icon(hr.weather_code[i], hr.is_day[i] === 1) +
+        '<div class="d">' + Math.round(hr.temperature_2m[i]) + '°</div>' +
+        '<div class="r">' + (hr.precipitation_probability[i] ?? 0) + '%</div></div>';
+    }
+    $('hr').innerHTML = hs;
+    if ($('hr').style.display !== 'none') scrollNow();
+    wOk = Date.now();
+    try {
+      const a = await (await fetch(aurl(city))).json();
+      if (my === wTok) {
+        if (a.current && a.current.us_aqi != null) {
+          const v = Math.round(a.current.us_aqi);
+          WX.aqi = v;
+          $('aq').textContent = 'AQI ' + v + ' \u00B7 ' + AQC(v);
+          $('aq').style.color = v > 100 ? 'var(--acc)' : '';
+        } else { $('aq').textContent = '--'; }
+      }
+    } catch (e) { if (my === wTok) $('aq').textContent = '--'; }
+  } catch (e) { if (my === wTok) { $('cond').textContent = 'offline'; setTimeout(loadWeather, 30000); } }
+  if (my === wTok) { applyDayNight(); renderRibbon(); updateAdvice(); maybeMorningBrief(); }
+}
+loadWeather(); setInterval(loadWeather, 600000);
+
+// ---- calendar (events come from the board's server)
+let cal = {y: new Date().getFullYear(), m: new Date().getMonth(), sel: ymd(new Date())};
+let calEvents = [], byDay = {}, agEvents = [], calMsg = 'Loading calendar...', calT = null, calTok = 0, agT = null, agTok = 0;
+function spread(list) {
+  const map = {};
+  const add = (k, ev) => { (map[k] = map[k] || []).push(ev); };
+  list.forEach(ev => {
+    let n = 0;
+    if (ev.allday) {
+      let d = parseYmd(ev.s); const end = parseYmd(ev.e);
+      while (d < end && n++ < 62) { add(ymd(d), ev); d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1); }
+    } else {
+      const s = new Date(ev.s); let e = new Date(ev.e);
+      if (e <= s) e = new Date(s.getTime() + 1);
+      const last = new Date(e.getTime() - 1);
+      let d = new Date(s.getFullYear(), s.getMonth(), s.getDate());
+      while (d <= last && n++ < 62) { add(ymd(d), ev); d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1); }
+    }
+  });
+  for (const k in map) map[k].sort((a, b) => (b.allday - a.allday) || String(a.s).localeCompare(String(b.s)));
+  return map;
+}
+const statusOf = (j, n) => !j.configured ? 'No calendar linked.' : !j.ready ? 'Loading calendar...' :
+  (j.error && !n) ? 'Calendar error ' + j.error : '';
+async function fetchCal(a, b) {
+  const j = await (await fetch('/api/calendar?start=' + ymd(a) + '&end=' + ymd(b))).json();
+  calConfigured = !!j.configured;
+  if (j.ok) calSrv = j.ok * 1000;
+  return j;
+}
+function renderCal() {
+  $('cmon').textContent = new Date(cal.y, cal.m, 1).toLocaleDateString('en-GB', {month: 'long', year: 'numeric'});
+  const off = (new Date(cal.y, cal.m, 1).getDay() + 6) % 7, today = ymd(new Date());
+  let h = '';
+  for (let i = 0; i < 42; i++) {
+    const d = new Date(cal.y, cal.m, 1 - off + i), k = ymd(d);
+    const cls = (d.getMonth() !== cal.m ? 'o ' : '') + (k === today ? 't ' : '') + (k === cal.sel ? 's' : '');
+    h += '<button class="' + cls + '" data-k="' + k + '">' + d.getDate() + (byDay[k] ? '<i></i>' : '') + '</button>';
+  }
+  $('cgrid').innerHTML = h;
+}
+function renderDay() {
+  $('cdate').textContent = parseYmd(cal.sel).toLocaleDateString('en-GB', {weekday: 'long', day: 'numeric', month: 'long'});
+  let h = '';
+  (byDay[cal.sel] || []).forEach(ev => {
+    const t = ev.allday ? 'All day' : (ev.e === ev.s ? tmOf(ev.s) : tmOf(ev.s) + ' - ' + tmOf(ev.e));
+    h += '<div class="ev"><div class="et">' + t + '</div><div class="en">' + esc(ev.title) + '</div></div>';
+  });
+  if (!h) h = '<div class="none">' + esc(calMsg || 'Nothing planned') + '</div>';
+  $('clist').innerHTML = h;
+}
+async function loadCal() {
+  clearTimeout(calT);
+  const my = ++calTok;
+  const off = (new Date(cal.y, cal.m, 1).getDay() + 6) % 7;
+  const a = new Date(cal.y, cal.m, 1 - off - 1), b = new Date(cal.y, cal.m, 1 - off + 44);
+  let next = 300000;
+  try {
+    const j = await fetchCal(a, b);
+    if (my !== calTok) return;
+    calEvents = j.events || [];
+    calMsg = statusOf(j, calEvents.length);
+    if (!j.configured || !j.ready || j.error) next = 15000;
+  } catch (e) {
+    if (my !== calTok) return;
+    calMsg = 'Calendar offline'; next = 15000;
+  }
+  byDay = spread(calEvents); renderCal(); renderDay(); renderRibbon(); updateAdvice();
+  calT = setTimeout(loadCal, next);
+}
+function renderAgenda() {
+  const map = spread(agEvents), today = ymd(new Date()), t0 = parseYmd(today), nowMs = Date.now();
+  let h = '';
+  Object.keys(map).filter(k => k >= today).sort().forEach(k => {
+    const d = parseYmd(k), diff = Math.round((d - t0) / 86400000);
+    const name = diff === 0 ? 'Today' : diff === 1 ? 'Tomorrow' : d.toLocaleDateString('en-GB', {weekday: 'long', day: 'numeric', month: 'short'});
+    h += '<div class="agd' + (diff === 0 ? ' today' : '') + '">' + name + '</div>';
+    map[k].forEach(ev => {
+      const past = diff === 0 && !ev.allday && Date.parse(ev.e) <= nowMs;
+      const t = ev.allday ? 'All day' : (ev.e === ev.s ? tmOf(ev.s) : tmOf(ev.s) + ' - ' + tmOf(ev.e));
+      h += '<div class="ev' + (past ? ' p' : '') + '"><div class="et">' + t + '</div><div class="en">' + esc(ev.title) + '</div></div>';
+    });
+  });
+  if (!h) h = '<div class="none">' + esc(calMsg || 'Nothing planned in the next 45 days') + '</div>';
+  $('ag').innerHTML = h;
+}
+async function loadAgenda() {
+  clearTimeout(agT);
+  const my = ++agTok;
+  const a = new Date(), b = new Date(a.getFullYear(), a.getMonth(), a.getDate() + 45);
+  let next = 300000;
+  try {
+    const j = await fetchCal(new Date(a.getFullYear(), a.getMonth(), a.getDate()), b);
+    if (my !== agTok) return;
+    agEvents = j.events || [];
+    calMsg = statusOf(j, agEvents.length);
+    if (!j.configured || !j.ready || j.error) next = 15000;
+  } catch (e) {
+    if (my !== agTok) return;
+    calMsg = 'Calendar offline'; next = 15000;
+  }
+  renderAgenda(); updateNext(); renderRibbon(); updateAdvice(); maybeMorningBrief();
+  agT = setTimeout(loadAgenda, next);
+}
+function calMode(m) {
+  $('cmn').classList.toggle('on', m === 'm');
+  $('cag').classList.toggle('on', m === 'a');
+  $('calm').style.display = m === 'm' ? 'flex' : 'none';
+  $('ag').style.display = m === 'a' ? 'block' : 'none';
+  if (m === 'a') { renderAgenda(); $('ag').scrollTop = 0; }
+}
+$('cmn').onclick = () => calMode('m');
+$('cag').onclick = () => calMode('a');
+$('cgrid').onclick = e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  cal.sel = b.dataset.k; renderCal(); renderDay();
+};
+$('cprev').onclick = () => { cal.m--; if (cal.m < 0) { cal.m = 11; cal.y--; } renderCal(); loadCal(); };
+$('cnext').onclick = () => { cal.m++; if (cal.m > 11) { cal.m = 0; cal.y++; } renderCal(); loadCal(); };
+$('cmon').onclick = () => { const n = new Date(); cal.y = n.getFullYear(); cal.m = n.getMonth(); cal.sel = ymd(n); renderCal(); renderDay(); loadCal(); };
+renderCal(); renderDay(); loadCal(); loadAgenda();
+setInterval(renderCal, 60000);
+setInterval(() => { if ($('ag').style.display !== 'none') renderAgenda(); }, 60000);
+
+// ---- next-event countdown under the clocks
+function dur(ms, startIso) {
+  const m = Math.max(1, Math.round(ms / 60000));
+  if (m < 60) return m + ' min';
+  if (m < 1440) { const h = Math.floor(m / 60), r = m % 60; return h + 'h' + (r ? ' ' + r + 'm' : ''); }
+  return new Date(startIso).toLocaleDateString('en-GB', {weekday: 'short'}) + ' ' + tmOf(startIso);
+}
+function updateNext() {
+  const now = Date.now();
+  let cur = null, nxt = null;
+  agEvents.forEach(ev => {
+    if (ev.allday) return;
+    const s = Date.parse(ev.s), e = Date.parse(ev.e);
+    if (s <= now && e > now) { if (!cur || s > Date.parse(cur.s)) cur = ev; }
+    else if (s > now && (!nxt || s < Date.parse(nxt.s))) nxt = ev;
+  });
+  let h = '';
+  if (cur) h = 'Now: <b>' + esc(cur.title) + '</b> \u00B7 <i>ends in ' + dur(Date.parse(cur.e) - now, cur.e) + '</i>';
+  else if (nxt) {
+    const diff = Date.parse(nxt.s) - now;
+    h = 'Next: <b>' + esc(nxt.title) + '</b> \u00B7 <i>' + (diff < 86400000 ? 'in ' : '') + dur(diff, nxt.s) + '</i>';
+  } else if (calConfigured && !calMsg) h = 'No more events soon';
+  $('nextev').innerHTML = h;
+}
+setInterval(updateNext, 30000);
+
+// ---- spotify remote
+const PLAY = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+const PAUSE = '<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>';
+const HOLD_MS = 750;
+let st = null, tFetch = 0, seeking = false, seekPreview = null, vdrag = false, seekHold = 0, volHold = 0, playHold = 0, shuffleHold = 0, repeatHold = 0, lastTrackKey = '';
+const fmt = ms => { const s = Math.floor(ms / 1000); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+let visualProgress = 0, visualTrackKey = '', lastMainTime = '', lastTotalTime = '', lastLyricsTime = '';
+function paintMainProgress(f, ms) {
+  f = Math.max(0, Math.min(1, Number(f) || 0));
+  const p = (f * 100) + '%';
+  const fill = $('pfill');
+  if (fill) { fill.style.transform = 'scaleX(' + f + ')'; fill.dataset.frac = String(f); }
+  if ($('pthumb')) $('pthumb').style.left = p;
+  const cur = fmt(ms || 0), tot = fmt(st && st.state === 'ok' ? (st.duration || 0) : 0);
+  if ($('tcur') && cur !== lastMainTime) { $('tcur').textContent = cur; lastMainTime = cur; }
+  if ($('ttot') && tot !== lastTotalTime) { $('ttot').textContent = tot; lastTotalTime = tot; }
+}
+function paintLyricsProgress(f, ms) {
+  if (!$('lyricsScreen').classList.contains('on')) return;
+  f = Math.max(0, Math.min(1, Number(f) || 0));
+  const p = (f * 100) + '%';
+  if ($('lyricsProgressFill')) $('lyricsProgressFill').style.transform = 'scaleX(' + f + ')';
+  if ($('lyricsProgressThumb')) $('lyricsProgressThumb').style.left = p;
+  const t = fmt(ms || 0) + ' / ' + fmt(st && st.state === 'ok' ? (st.duration || 0) : 0);
+  if ($('lyricsTime') && t !== lastLyricsTime) { $('lyricsTime').textContent = t; lastLyricsTime = t; }
+}
+function paintProgress(f, ms) { paintMainProgress(f, ms); paintLyricsProgress(f, ms); }
+function setProg(f) { paintProgress(f, st && st.state === 'ok' ? f * st.duration : 0); }
+function setVol(p) { $('vfill').style.height = p + '%'; $('vthumb').style.bottom = p + '%'; $('vlab').textContent = Math.round(p); }
+function slider(hit, track, vertical, onMove, onEnd) {
+  let on = false;
+  const f = e => {
+    const r = track.getBoundingClientRect();
+    const v = vertical ? 1 - (e.clientY - r.top) / r.height : (e.clientX - r.left) / r.width;
+    return Math.max(0, Math.min(1, v));
+  };
+  hit.addEventListener('pointerdown', e => { on = true; hit.setPointerCapture(e.pointerId); onMove(f(e)); });
+  hit.addEventListener('pointermove', e => { if (on) onMove(f(e)); });
+  hit.addEventListener('pointerup', e => { if (on) { on = false; onEnd(f(e)); } });
+  hit.addEventListener('pointercancel', () => { on = false; seeking = false; vdrag = false; });
+}
+let pollBusy = false;
+async function poll() {
+  if (pollBusy || document.hidden) return;
+  pollBusy = true;
+  try {
+    const n = await (await fetch('/api/now')).json(), t = Date.now();
+    const both = st && st.state === 'ok' && n.state === 'ok';
+    if (both && t < seekHold) n.progress = st.progress; else tFetch = t;
+    if (both && t < volHold) n.volume = st.volume;
+    if (both && t < playHold) n.playing = st.playing;
+    if (both && t < shuffleHold) n.shuffle = st.shuffle;
+    if (both && t < repeatHold) n.repeat = st.repeat;
+    st = n;
+    if (!(st.state === 'error' && st.code === 0)) spOk = Date.now();
+    render();
+    const trackKey = st.state === 'ok' ? st.title + '|' + st.artist + '|' + st.duration : st.state;
+    if (trackKey !== lastTrackKey) { lastTrackKey = trackKey; onTrackChanged(); }
+  } catch (e) {
+  } finally {
+    pollBusy = false;
+  }
+}
+function renderExtras() {
+  const ok = st && st.state === 'ok';
+  $('shuf').classList.toggle('on', !!(ok && st.shuffle));
+  $('rep').classList.toggle('on', !!(ok && st.repeat !== 'off'));
+  $('one').style.display = ok && st.repeat === 'track' ? 'block' : 'none';
+}
+function render() {
+  if (!st) return;
+  if (st.state === 'ok') {
+    $('title').textContent = st.title;
+    $('artist').textContent = st.artist;
+    $('msg').textContent = st.device ? 'on ' + st.device + ' \u25BE' : '';
+    if (st.art) {
+      if ($('art').getAttribute('src') !== st.art) $('art').src = st.art;
+      $('art').style.visibility = 'visible';
+    } else { $('art').style.visibility = 'hidden'; }
+    $('pp').innerHTML = st.playing ? PAUSE : PLAY;
+    if (!vdrag && Date.now() >= volHold && st.volume != null) setVol(st.volume);
+  } else {
+    $('title').textContent = '--';
+    $('artist').textContent = '';
+    $('art').style.visibility = 'hidden';
+    $('pp').innerHTML = PLAY;
+    $('msg').textContent = st.state === 'login' ? 'Not connected. Run the login step on the board.' :
+      st.state === 'idle' ? 'Nothing playing. Start Spotify on your Mac, or tap here to pick a device.' :
+      st.code === 0 ? 'Spotify offline' : 'Spotify error ' + st.code;
+  }
+  renderExtras();
+}
+setInterval(() => { if (!document.hidden) syncLyricsProgress(); }, 250);
+function progressFrame() {
+  requestAnimationFrame(progressFrame);
+  if (document.hidden) return;
+  if (!st || st.state !== 'ok') {
+    if (visualProgress !== 0) { visualProgress = 0; paintProgress(0, 0); }
+    return;
+  }
+  const key = st.title + '|' + st.artist + '|' + st.duration;
+  let target = st.progress + (st.playing ? Date.now() - tFetch : 0);
+  if (seeking && seekPreview != null) target = seekPreview;
+  target = Math.max(0, Math.min(st.duration || 1, target));
+  if (seeking || key !== visualTrackKey || Math.abs(target - visualProgress) > 2500) {
+    visualProgress = target;
+    visualTrackKey = key;
+  } else {
+    // Light smoothing prevents small poll corrections from visibly snapping.
+    visualProgress += (target - visualProgress) * 0.18;
+  }
+  paintProgress(visualProgress / (st.duration || 1), visualProgress);
+}
+requestAnimationFrame(progressFrame);
+async function act(a, q, delay) {
+  try { await fetch('/api/' + a + (q || ''), {method: 'POST'}); } catch (e) {}
+  setTimeout(poll, delay || 400);
+}
+$('prev').onclick = () => act('prev');
+$('next').onclick = () => act('next');
+$('pp').onclick = () => {
+  if (st && st.state === 'ok') {
+    st.progress += st.playing ? Date.now() - tFetch : 0; tFetch = Date.now();
+    st.playing = !st.playing;
+    playHold = Date.now() + HOLD_MS;
+    $('pp').innerHTML = st.playing ? PAUSE : PLAY;
+    act(st.playing ? 'play' : 'pause', '', 900);
+  } else { act('play'); }
+};
+$('shuf').onclick = () => {
+  if (!st || st.state !== 'ok') return;
+  st.shuffle = !st.shuffle; shuffleHold = Date.now() + HOLD_MS; renderExtras();
+  act('shuffle', '?state=' + st.shuffle, 900);
+};
+$('rep').onclick = () => {
+  if (!st || st.state !== 'ok') return;
+  const o = ['off', 'context', 'track'];
+  st.repeat = o[(o.indexOf(st.repeat) + 1) % 3]; repeatHold = Date.now() + HOLD_MS; renderExtras();
+  act('repeat', '?state=' + st.repeat, 900);
+};
+slider($('pbar'), $('ptrack'), false,
+  f => { seeking = true; if (st && st.state === 'ok') { seekPreview = f * st.duration; paintProgress(f, seekPreview); } },
+  f => {
+    seeking = false; seekPreview = null;
+    if (st && st.state === 'ok') {
+      const ms = Math.round(f * st.duration);
+      st.progress = ms; tFetch = Date.now(); seekHold = Date.now() + HOLD_MS;
+      act('seek', '?ms=' + ms, 1200);
+    }
+  });
+slider($('vbar'), $('vtrack'), true,
+  f => { vdrag = true; setVol(f * 100); },
+  f => { vdrag = false; volHold = Date.now() + HOLD_MS; if (st && st.state === 'ok') st.volume = Math.round(f * 100); act('volume', '?percent=' + Math.round(f * 100), 800); });
+$('pp').innerHTML = PLAY;
+poll(); setInterval(poll, 2500);
+
+// ---- pop-up list (cities, Spotify devices)
+function closePicker() { $('picker').classList.remove('open'); }
+function showList(title, items) {
+  $('ptitle').textContent = title;
+  const l = $('plist'); l.innerHTML = '';
+  items.forEach(it => {
+    const b = document.createElement('button');
+    b.textContent = it.label;
+    if (it.sub) { const s = document.createElement('small'); s.textContent = it.sub; b.appendChild(s); }
+    if (it.cur) b.className = 'cur';
+    b.onclick = () => { const top = l.scrollTop; closePicker(); it.cb(top); };
+    if (it.play) {
+      const row = document.createElement('div'); row.className = 'prow';
+      b.classList.add('main');
+      const pb = document.createElement('button'); pb.className = 'pplay'; pb.setAttribute('aria-label', 'Play');
+      pb.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+      pb.onclick = () => { closePicker(); it.play(); };
+      row.appendChild(b); row.appendChild(pb); l.appendChild(row);
+    } else { l.appendChild(b); }
+  });
+  $('picker').classList.add('open');
+  const cu = l.querySelector('.cur');
+  if (cu) l.scrollTop = Math.max(0, cu.offsetTop - l.clientHeight / 3);
+}
+function openPicker(title, cur, cb) {
+  showList(title, C.slice().sort((a, b) => a[0].localeCompare(b[0])).map(c => ({label: c[0], cur: c[0] === cur, cb: () => cb(c[0])})));
+}
+async function openDevices() {
+  try {
+    const j = await (await fetch('/api/devices')).json();
+    const dv = j.devices || [];
+    if (!dv.length) { showList('Play on', [{label: 'No devices found. Open Spotify on your Mac.', cur: false, cb: () => {}}]); return; }
+    showList('Play on', dv.map(d => ({
+      label: d.name + (d.type ? '  (' + d.type + ')' : ''), cur: d.active,
+      cb: () => act('transfer', '?id=' + encodeURIComponent(d.id), 800)
+    })));
+  } catch (e) {}
+}
+// ---- compact output-device menu under the device name
+async function toggleDevMenu(e) {
+  if (e) e.stopPropagation();
+  const m = $('devmenu');
+  if (m.style.display === 'block') { m.style.display = 'none'; return; }
+  m.innerHTML = '<div class="dev none">Loading...</div>';
+  m.style.display = 'block';
+  try {
+    const j = await (await fetch('/api/devices')).json();
+    const dv = j.devices || [];
+    if (!dv.length) { m.innerHTML = '<div class="dev none">No devices found. Open Spotify on your Mac.</div>'; return; }
+    m.innerHTML = '';
+    dv.forEach(d => {
+      const b = document.createElement('button');
+      b.className = 'dev' + (d.active ? ' cur' : '');
+      b.textContent = d.name;
+      if (d.type) { const t = document.createElement('small'); t.textContent = d.type; b.appendChild(t); }
+      b.onclick = ev => { ev.stopPropagation(); m.style.display = 'none'; act('transfer', '?id=' + encodeURIComponent(d.id), 800); };
+      m.appendChild(b);
+    });
+  } catch (err) { m.style.display = 'none'; }
+}
+document.addEventListener('click', e => {
+  const m = $('devmenu');
+  if (m.style.display === 'block' && !m.contains(e.target)) m.style.display = 'none';
+});
+$('msg').onclick = toggleDevMenu;
+
+// ---- board audio output (separate local service on :8081)
+const AUDIO = 'http://127.0.0.1:8081';
+let aList = [], aHold = 0, aDrag = false, aSent = 0;
+const BOARD_DEV = 'Vesper';
+let aHave = false;
+function aVis() {
+  const on = aHave && st && st.state === 'ok' && st.playing && String(st.device || '').toLowerCase() === BOARD_DEV.toLowerCase();
+  $('aout').style.display = on ? 'flex' : 'none';
+  $('avol').style.display = '';
+  if (!on) $('amenu').style.display = 'none';
+}
+const aCur = () => aList.find(x => x.default) || aList[0];
+const aPost = path => fetch(AUDIO + path, { method: 'POST' }).catch(() => {});
+let aBusy = false;
+async function aLoad() {
+  if (aBusy || document.hidden) return;
+  aBusy = true;
+  try {
+    const j = await (await fetch(AUDIO + '/audio')).json();
+    aList = j.sinks || [];
+    const c = aCur();
+    aHave = !!c;
+    aVis();
+    if (!c) return;
+    $('aname').textContent = c.label + ' \u25BE';
+    if (!aDrag && Date.now() >= aHold) $('avol').value = c.volume;
+  } catch (e) {
+    aHave = false; aVis();
+  } finally {
+    aBusy = false;
+  }
+}
+$('avol').oninput = () => {
+  aDrag = true;
+  if (Date.now() - aSent < 150) return;
+  aSent = Date.now();
+  const c = aCur();
+  if (c) aPost('/audio/volume?name=' + encodeURIComponent(c.name) + '&percent=' + $('avol').value);
+};
+$('avol').onchange = () => {
+  aDrag = false; aHold = Date.now() + HOLD_MS;
+  const c = aCur();
+  if (c) { c.volume = +$('avol').value; aPost('/audio/volume?name=' + encodeURIComponent(c.name) + '&percent=' + $('avol').value); }
+};
+$('aname').onclick = e => {
+  e.stopPropagation();
+  const m = $('amenu');
+  if (m.style.display === 'block') { m.style.display = 'none'; return; }
+  m.innerHTML = '';
+  aList.forEach(d => {
+    const b = document.createElement('button');
+    b.className = 'dev' + (d.default ? ' cur' : '') + (d.avail ? '' : ' off');
+    b.textContent = d.label + (d.avail ? '' : ' (not plugged in)');
+    b.onclick = ev => { ev.stopPropagation(); m.style.display = 'none'; aPost('/audio/default?name=' + encodeURIComponent(d.name)).then(aLoad); };
+    m.appendChild(b);
+  });
+  m.style.display = 'block';
+};
+document.addEventListener('click', e => {
+  const m = $('amenu');
+  if (m.style.display === 'block' && !m.contains(e.target)) m.style.display = 'none';
+});
+aLoad(); setInterval(aLoad, 5000);
+setInterval(aVis, 1000);
+$('picker').addEventListener('click', e => { if (e.target === $('picker')) closePicker(); });
+
+// ---- network status (Wi-Fi row + offline notice)
+let NET = null, netBad = 0;
+function renderNet() {
+  if (!NET) { $('netv').textContent = '--'; return; }
+  const l1 = [];
+  if (NET.iface) {
+    l1.push(esc(NET.ssid || 'not connected'));
+    if (NET.band) l1.push(esc(NET.band));
+    if (NET.signal != null) {
+      const w = NET.signal >= -60 ? 'strong' : NET.signal >= -70 ? 'ok' : 'weak';
+      l1.push(NET.signal + ' dBm (' + (w === 'weak' ? '<em>weak</em>' : w) + ')');
+    }
+  } else { l1.push('wired'); }
+  const l2 = [];
+  if (NET.ip) l2.push(esc(NET.ip));
+  l2.push(NET.online ? 'online' : '<em>no internet</em>');
+  $('netv').innerHTML = l1.join(' \u00B7 ') + '<br>' + l2.join(' \u00B7 ');
+}
+let netBusy = false;
+async function pollNet() {
+  if (netBusy || document.hidden) return;
+  netBusy = true;
+  try { NET = await (await fetch('/api/net')).json(); netBad = NET.online ? 0 : netBad + 1; }
+  catch (e) { netBad++; }
+  finally { netBusy = false; }
+  $('net').style.display = netBad >= 2 ? 'block' : 'none';
+  renderNet();
+}
+pollNet(); setInterval(pollNet, 15000);
+
+// ---- "updated hh:mm" notes, shown only when data is later than usual
+const hm = ts => new Date(ts).toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'});
+function checkStale() {
+  if (document.hidden) return;
+  const now = Date.now();
+  const set = (id, stale, ts) => {
+    const e = $(id);
+    e.style.display = stale ? 'inline' : 'none';
+    if (stale) e.textContent = ts ? ' \u00B7 updated ' + hm(ts) : ' \u00B7 no data yet';
+  };
+  set('stw', now - (wOk || pageStart) > 12 * 60000, wOk);
+  set('stc', calConfigured && now - (calSrv || pageStart) > 12 * 60000, calSrv);
+  set('sts', now - (spOk || pageStart) > 30000, spOk);
+}
+setInterval(checkStale, 10000);
+
+// ---- settings sheet: swipe down from the top edge
+function openSheet() { showSettingsPage('home'); $('sheet').classList.add('open'); $('scrim').classList.add('open'); pollNet(); loadSsh(); loadBright(); }
+function closeSheet() { $('sheet').classList.remove('open'); $('scrim').classList.remove('open'); }
+let ey = null;
+const edge = $('edge');
+edge.addEventListener('pointerdown', e => { ey = e.clientY; edge.setPointerCapture(e.pointerId); });
+edge.addEventListener('pointermove', e => { if (ey !== null && e.clientY - ey > 50) { ey = null; openSheet(); } });
+edge.addEventListener('pointerup', () => { ey = null; });
+edge.addEventListener('pointercancel', () => { ey = null; });
+let sy = null;
+$('sheet').addEventListener('pointerdown', e => { sy = e.clientY; });
+$('sheet').addEventListener('pointermove', e => { if (sy !== null && sy - e.clientY > 60) { sy = null; closeSheet(); } });
+$('sheet').addEventListener('pointerup', () => { sy = null; });
+$('sx').onclick = closeSheet;
+$('scrim').onclick = closeSheet;
+
+$('tl').onclick = () => { S.theme = 'light'; save(); applyTheme(); };
+$('td').onclick = () => { S.theme = 'dark'; save(); applyTheme(); };
+$('ta').onclick = () => { S.theme = 'auto'; save(); applyTheme(); };
+for (let k = 0; k < 3; k++) {
+  $('c' + k).onclick = () => openPicker('Clock ' + (k + 1), S.clocks[k], n => {
+    S.clocks[k] = n; save(); setZones(); refreshSettings(); tick(); applyTheme();
+  });
+}
+$('wsel').onclick = () => openPicker('Weather location', S.weather, n => {
+  S.weather = n; save(); refreshSettings(); loadWeather();
+});
+
+// ---- settings pages and feature controls
+const SET_TITLES = {home: 'Settings', appearance: 'Appearance', clocks: 'Clocks & weather',
+  sound: 'Sound & focus', display: 'Display', network: 'Network', system: 'System'};
+function showSettingsPage(name) {
+  document.querySelectorAll('#sheet .setpage').forEach(p => { p.hidden = p.id !== 'set-' + name; });
+  $('shTitle').textContent = SET_TITLES[name] || 'Settings';
+}
+document.querySelectorAll('#sheet .srow.cat').forEach(r => {
+  r.querySelector('button').onclick = () => showSettingsPage(r.dataset.page);
+});
+document.querySelectorAll('#sheet .srow.backrow').forEach(r => {
+  r.querySelector('button').onclick = () => showSettingsPage(r.dataset.back || 'home');
+});
+function pickOptions(title, options, current, cb) {
+  showList(title, options.map(o => ({
+    label: o.label, sub: o.sub || '', cur: o.value === current,
+    cb: () => cb(o.value)
+  })));
+}
+$('nightT').onclick = () => { S.nightMode = !S.nightMode; save(); refreshSettings(); applyDayNight(); };
+$('autoDimT').onclick = () => { S.autoDim = !S.autoDim; save(); refreshSettings(); applyDayNight(); };
+function toggleRibbon() { S.ribbon = !S.ribbon; save(); refreshSettings(); renderRibbon(); }
+$('ribbonT').onclick = toggleRibbon;
+$('ribbonQuick').onclick = toggleRibbon;
+$('ambientT').onclick = () => { S.ambient = !S.ambient; save(); refreshSettings(); applyAmbient(); };
+$('briefT').onclick = () => { S.brief = !S.brief; save(); refreshSettings(); };
+$('testBrief').onclick = () => { closeSheet(); showMorningBrief(true); };
+$('meetT').onclick = () => {
+  S.meetingPause = !S.meetingPause; save(); refreshSettings();
+  if (!S.meetingPause && meetingPaused) {
+    meetingPaused = false;
+    fetch('/api/play', {method: 'POST'}).then(() => setTimeout(poll, 800)).catch(() => {});
+    notify('Meeting auto-pause off — music resumed');
+  }
+};
+$('wakeResumeT').onclick = () => { S.wakeResume = !S.wakeResume; save(); refreshSettings(); };
+$('nightPct').onclick = () => pickOptions('Night brightness', [15, 25, 35, 50].map(v => ({label: v + '%', value: v})), S.nightPct, v => {
+  S.nightPct = v; save(); refreshSettings(); applyDayNight();
+});
+$('idleSel').onclick = () => pickOptions('Idle dim', [
+  {label: 'Off', value: 0}, {label: '5 min', value: 5}, {label: '10 min', value: 10},
+  {label: '20 min', value: 20}, {label: '30 min', value: 30}
+], S.idleDim, v => { S.idleDim = v; save(); refreshSettings(); noteActivity(); });
+$('focusLenSel').onclick = () => pickOptions('Focus length', [15, 25, 50, 90].map(v => ({label: v + ' min', value: v})), S.focusLen, v => {
+  S.focusLen = v; save(); refreshSettings();
+});
+$('lyricsOffsetSel').onclick = () => pickOptions('Lyrics sync direction', [
+  {label: '-3.0s', sub: 'lyrics later', value: -3}, {label: '-2.0s', sub: 'lyrics later', value: -2},
+  {label: '-1.5s', sub: 'lyrics later', value: -1.5}, {label: '-1.0s', sub: 'lyrics later', value: -1},
+  {label: '-0.5s', sub: 'lyrics later', value: -0.5}, {label: '0.0s', sub: 'neutral', value: 0},
+  {label: '+0.5s', sub: 'lyrics earlier', value: 0.5}, {label: '+1.0s', sub: 'lyrics earlier', value: 1},
+  {label: '+1.5s', sub: 'lyrics earlier', value: 1.5}, {label: '+2.0s', sub: 'lyrics earlier', value: 2},
+  {label: '+3.0s', sub: 'lyrics earlier', value: 3}
+], S.lyricsOffset, v => { S.lyricsOffset = v; save(); refreshSettings(); if ($('lyricsScreen').classList.contains('on')) syncLyricsProgress(true); });
+$('secondSel').onclick = () => pickOptions('Clock second hand', [
+  {label: 'Off', value: 'off'}, {label: 'Tick every second', value: 'tick'}, {label: 'Smooth sweep', value: 'smooth'}
+], S.secondHand, v => { S.secondHand = v; save(); refreshSettings(); tick(); });
+$('focusNow').onclick = () => { closeSheet(); startFocus(S.focusLen); };
+$('sleepSel').onclick = () => {
+  const options = [15, 30, 45, 60].map(v => ({label: v + ' minutes', value: v}));
+  if (S.sleepEnd > Date.now()) options.unshift({label: 'Cancel sleep timer', value: 0});
+  pickOptions('Sleep timer', options, null, v => { closeSheet(); v ? startSleep(v) : cancelSleep(); });
+};
+$('wakeSel').onclick = () => pickOptions('Wake time', [
+  {label: 'Off', value: ''}, {label: '06:00', value: '06:00'}, {label: '06:30', value: '06:30'},
+  {label: '07:00', value: '07:00'}, {label: '07:30', value: '07:30'}, {label: '08:00', value: '08:00'},
+  {label: '08:30', value: '08:30'}, {label: '09:00', value: '09:00'}
+], S.wakeAt, v => { S.wakeAt = v; S.lastWake = ''; save(); refreshSettings(); });
+$('cancelTimers').onclick = () => { cancelFocus(); cancelSleep(); notify('Focus and sleep timers cleared'); };
+$('guestSel').onclick = () => {
+  const options = [30, 60, 120, 240].map(v => ({label: v + ' minutes', value: v}));
+  if (S.guestEnd > Date.now()) options.unshift({label: 'End guest mode', value: 0});
+  pickOptions('Guest mode', options, null, v => { closeSheet(); v ? startGuest(v) : endGuest(); });
+};
+$('healthBtn').onclick = () => { closeSheet(); openHealth(); };
+$('restartKiosk').onclick = async () => {
+  const b = $('restartKiosk');
+  if (b.dataset.arm !== '1') {
+    b.dataset.arm = '1'; b.textContent = 'Tap again';
+    setTimeout(() => { b.dataset.arm = ''; b.textContent = 'Restart'; }, 4000);
+    return;
+  }
+  b.dataset.arm = ''; b.textContent = 'Restarting…';
+  try { await fetch('/api/restart-kiosk', {method: 'POST'}); } catch (e) {}
+  notify('Chromium is restarting…', 4000);
+};
+$('advice').onclick = () => { if (adviceAction) adviceAction(); };
+$('lyrBtn').onclick = openLyrics;
+$('lyricsClose').onclick = closeLyrics;
+$('healthClose').onclick = closeHealth;
+let ambDrag = false;
+function showAmbientValue(v) {
+  v = clampPct(v);
+  const x = v + '%';
+  if ($('ambFill')) $('ambFill').style.width = x;
+  if ($('ambThumb')) $('ambThumb').style.left = x;
+  if ($('ambVal')) $('ambVal').textContent = v + '%';
+}
+slider($('ambBar'), $('ambTrack'), false,
+  f => { ambDrag = true; showAmbientValue(Math.round(f * 100)); },
+  f => { ambDrag = false; setAmbience(Math.round(f * 100)); });
+let titleHold = 0;
+$('shTitle').addEventListener('pointerdown', () => {
+  clearTimeout(titleHold);
+  titleHold = setTimeout(() => { showSettingsPage('system'); openHealth(); notify('System health opened', 2000); }, 1800);
+});
+['pointerup', 'pointercancel', 'pointerleave'].forEach(n => $('shTitle').addEventListener(n, () => clearTimeout(titleHold)));
+// ---- brightness (5 to 100 percent, never fully black)
+let bdrag = false;
+const bpos = v => Math.max(0, Math.min(1, (v - 5) / 95));
+function showBright(v) { const x = (bpos(v) * 100) + '%'; $('bfill').style.width = x; $('bthumb').style.left = x; $('bval').textContent = v + '%'; }
+async function loadBright() {
+  if (bdrag) return;
+  try {
+    const j = await (await fetch('/api/brightness')).json();
+    if (j.ok && j.percent != null) { showBright(Math.max(5, j.percent)); $('bbar').style.opacity = 1; }
+    else { $('bval').textContent = 'n/a'; $('bbar').style.opacity = .4; }
+  } catch (e) {}
+}
+$('bbar').addEventListener('pointerdown', e => e.stopPropagation());
+slider($('bbar'), $('btrack'), false,
+  f => { bdrag = true; showBright(Math.round(5 + f * 95)); },
+  async f => {
+    bdrag = false;
+    const v = Math.round(5 + f * 95);
+    try {
+      const j = await (await fetch('/api/brightness?percent=' + v, {method: 'POST'})).json();
+      if (j.status !== 200) { $('bval').textContent = 'no access'; $('bbar').style.opacity = .4; }
+    } catch (e) {}
+  });
+// ---- ssh status and shut down
+async function loadSsh() {
+  try {
+    const j = await (await fetch('/api/ssh')).json();
+    const e = $('sshv');
+    if (!j.listening) { e.innerHTML = '<em>stopped</em><br>not accepting connections'; return; }
+    const l1 = ['running'];
+    if (j.sessions) l1.push(j.sessions + ' connected');
+    if (j.enabled === false) l1.push('<em>off at boot</em>');
+    const host = NET && NET.ip ? 'ssh user@' + NET.ip : '';
+    e.innerHTML = l1.join(' \u00B7 ') + (host ? '<br>' + esc(host) : '');
+  } catch (e) {}
+}
+let pwrT = null;
+$('pwr').onclick = async () => {
+  const b = $('pwr');
+  if (b.dataset.arm !== '1') {
+    try {
+      const j = await (await fetch('/api/power')).json();
+      if (!j.ok) { b.textContent = 'Not allowed'; setTimeout(() => { b.textContent = 'Shut down'; }, 3000); return; }
+    } catch (e) { return; }
+    b.dataset.arm = '1'; b.textContent = 'Tap again to confirm'; b.style.color = 'var(--acc)';
+    pwrT = setTimeout(() => { b.dataset.arm = ''; b.textContent = 'Shut down'; b.style.color = ''; }, 5000);
+    return;
+  }
+  clearTimeout(pwrT); b.dataset.arm = ''; b.textContent = 'Shutting down...';
+  try { await fetch('/api/poweroff', {method: 'POST'}); } catch (e) {}
+};
+// ---- battery indicator (hidden if the board has no battery)
+async function pollBat() {
+  try {
+    const j = await (await fetch('/api/battery')).json();
+    const e = $('bat');
+    if (!j.present) { e.style.display = 'none'; return; }
+    const chg = j.status === 'Charging';
+    const w = Math.round(17 * j.percent / 100);
+    e.className = chg ? 'chg' : (j.percent <= 15 ? 'low' : '');
+    e.style.display = 'flex';
+    e.innerHTML = '<svg viewBox="0 0 26 14"><rect x=".75" y=".75" width="21" height="12.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="23" y="4" width="2.5" height="6" rx="1" fill="currentColor"/><rect x="3" y="3" width="' + w + '" height="8" rx="1" fill="currentColor"/></svg>' +
+      (chg ? '<svg style="width:1.4vh;height:1.8vh" viewBox="0 0 10 14"><path d="M6 0 0 8h4l-1 6 6-8H5z" fill="currentColor"/></svg>' : '') +
+      '<span>' + j.percent + '%</span>';
+  } catch (e) {}
+}
+pollBat(); setInterval(pollBat, 30000);
+
+// ---- playlists and up next
+async function playPlaylist(p) {
+  $('msg').textContent = 'Starting ' + p.name + '...';
+  try {
+    const j = await (await fetch('/api/playlist?uri=' + encodeURIComponent(p.uri), {method: 'POST'})).json();
+    if (j.status !== 200 && j.status !== 204) $('msg').textContent = 'Could not start it. Open Spotify on your Mac and try again.';
+  } catch (e) {}
+  setTimeout(poll, 1500);
+}
+$('pls').onclick = async () => {
+  try {
+    const j = await (await fetch('/api/playlists')).json();
+    if (j.error) {
+      showList('Playlists', [{
+        label: j.error === 'scope' ? 'Needs a new Spotify login with playlist access.' : 'Could not load playlists (error ' + (j.code || '?') + ').',
+        sub: j.error === 'scope' ? 'Run the Spotify login step again on the board.' : '', cur: false, cb: () => {}}]);
+      return;
+    }
+    const pl = j.playlists || [];
+    if (!pl.length) { showList('Playlists', [{label: 'No playlists found.', cur: false, cb: () => {}}]); return; }
+    showList(j.recent === false ? 'Play a playlist \u00B7 log in again for recent-first order' : 'Play a playlist \u00B7 recent first', pl.map(p => ({label: (p.liked ? '\u2665  ' : '') + (p.name || '(untitled)'), sub: p.tracks != null ? p.tracks + ' tracks' : '', cur: false, play: () => playPlaylist(p), cb: () => openTracks(p, 0, [], 0)})));
+  } catch (e) {}
+};
+$('upn').onclick = async () => {
+  try {
+    const j = await (await fetch('/api/queue')).json();
+    const items = [];
+    if (j.now) items.push({label: j.now.title, sub: 'Now playing \u00B7 ' + j.now.artist, cur: true, cb: () => {}});
+    (j.queue || []).forEach((t, i) => items.push({label: t.title, sub: t.artist, cur: false, cb: () => act('skipto', '?n=' + (i + 1), 600)}));
+    if (!items.length) items.push({label: j.error ? 'Could not load the queue.' : 'The queue is empty.', cur: false, cb: () => {}});
+    showList('Up next \u00B7 tap a song to skip to it', items);
+  } catch (e) {}
+};
+// ---- songs inside a playlist
+async function playFrom(p, pos, tu) {
+  $('msg').textContent = 'Starting...';
+  try {
+    const j = await (await fetch('/api/playfrom?uri=' + encodeURIComponent(p.uri) + '&pos=' + (pos || 0) + (tu ? '&track=' + encodeURIComponent(tu) : ''), {method: 'POST'})).json();
+    if (j.status !== 200 && j.status !== 204) $('msg').textContent = 'Could not start it. Open Spotify on your Mac and try again.';
+  } catch (e) {}
+  setTimeout(poll, 1500);
+}
+async function openTracks(p, offset, acc, top) {
+  let j;
+  try { j = await (await fetch('/api/playlist-items?uri=' + encodeURIComponent(p.uri) + '&offset=' + offset)).json(); }
+  catch (e) { return; }
+  const playAll = {label: '\u25B6  Play whole playlist', sub: p.tracks != null ? p.tracks + ' tracks' : '', cur: true, cb: () => playPlaylist(p)};
+  if (j.error) {
+    showList(p.name || 'Playlist', [
+      {label: j.error === 'scope' ? 'Needs a new Spotify login with library access. Run the login step on the board again.' : j.error === 'denied' ? 'Spotify only lets this app list the songs of playlists you own or share.' : 'Could not load the songs (error ' + (j.code || '?') + ').', cur: false, cb: () => {}},
+      playAll]);
+    return;
+  }
+  const all = acc.slice();
+  if (offset === 0) {
+    all.push(playAll);
+    if (!(j.items || []).length) all.push({label: 'No songs to list here. The playlist may be empty, or not one you own or share.', cur: false, cb: () => {}});
+  }
+  (j.items || []).forEach(t => all.push({label: t.title, sub: t.artist, cur: false, cb: () => playFrom(p, t.pos, t.tu)}));
+  if (j.next < j.total) {
+    const nextOff = j.next;
+    all.push({label: 'Load more (' + (j.total - j.next) + ' left)', cur: false, more: true,
+      cb: top2 => openTracks(p, nextOff, all.filter(x => !x.more), top2)});
+  }
+  showList(p.name || 'Playlist', all);
+  if (top) $('plist').scrollTop = top;
+}
+$('rfs').onclick = async () => {
+  const b = $('rfs');
+  b.textContent = 'Refreshing...';
+  try { await fetch('/api/refresh-calendar', {method: 'POST'}); } catch (e) {}
+  await Promise.all([loadWeather(), loadCal(), loadAgenda(), poll(), pollNet()]);
+  const issues = [];
+  if ($('cond').textContent === 'offline') issues.push('weather');
+  if (/^Calendar (error|offline)/.test(calMsg)) issues.push('calendar');
+  b.textContent = issues.length ? 'Failed: ' + issues.join(', ') :
+    'Updated ' + new Date().toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'});
+};
+applyTheme(); refreshSettings();
+setInterval(() => { if (S.theme === 'auto') applyTheme(); }, 30000);
+
+// =====================================================================
+// Vesper features: focus, sleep/wake, meeting mode, lyrics, ribbon,
+// morning brief, guest mode, health, advice and ambient day/night.
+// =====================================================================
+let adviceAction = null;
+let lastDayNight = '';
+let idleTimer = 0;
+let meetingPaused = false;
+let meetingKey = '';
+let sleepLastFade = 0;
+let briefTries = 0;
+
+function notify(txt, ms) {
+  const e = $('toast');
+  e.textContent = txt;
+  e.classList.add('on');
+  clearTimeout(notify._t);
+  notify._t = setTimeout(() => e.classList.remove('on'), ms || 2600);
+}
+
+function clampPct(v) { return Math.max(0, Math.min(100, Math.round(v))); }
+function niceTime(ms) {
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), ss = s % 60;
+  return h ? h + ':' + String(m).padStart(2, '0') + ':' + String(ss).padStart(2, '0')
+           : m + ':' + String(ss).padStart(2, '0');
+}
+
+// ---- day / night + idle screen
+function applyDayNight() {
+  const now = new Date();
+  let night = now.getHours() < 7 || now.getHours() >= 19;
+  if (WX && WX.sunrise && WX.sunset) {
+    const sr = Date.parse(WX.sunrise), ss = Date.parse(WX.sunset);
+    if (isFinite(sr) && isFinite(ss)) night = Date.now() < sr || Date.now() >= ss;
+  }
+  const mode = S.nightMode && night ? 'night' : 'day';
+  document.documentElement.setAttribute('data-daynight', mode);
+  if (mode !== lastDayNight) {
+    const changed = lastDayNight;
+    lastDayNight = mode;
+    if (S.autoDim && changed !== '') {
+      fetch('/api/brightness?percent=' + (mode === 'night' ? S.nightPct : 80), {method: 'POST'}).catch(() => {});
+    }
+  }
+}
+
+function updateIdleText() {
+  const now = new Date();
+  $('idleClock').textContent = now.toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'});
+  $('idleDate').textContent = now.toLocaleDateString('en-GB', {weekday: 'long', day: 'numeric', month: 'long'});
+  $('idleWeather').textContent = WX && WX.current
+    ? Math.round(WX.current.temperature_2m) + '°C · ' + WC(WX.current.weather_code) + ' · ' + WX.city
+    : '';
+}
+function showIdle() {
+  if (document.hidden || featureMode()) return;
+  updateIdleText();
+  $('idleScreen').classList.add('on');
+}
+function noteActivity() {
+  $('idleScreen').classList.remove('on');
+  clearTimeout(idleTimer);
+  if (S.idleDim > 0) idleTimer = setTimeout(showIdle, S.idleDim * 60000);
+}
+['pointerdown', 'keydown', 'wheel'].forEach(n => document.addEventListener(n, noteActivity, {passive: true}));
+
+// ---- day ribbon
+function renderRibbon() {
+  document.body.classList.toggle('ribbon-on', !!S.ribbon);
+  if (!S.ribbon) return;
+  const box = $('ribbonBlocks');
+  if (!box) return;
+  const day = new Date(); day.setHours(0, 0, 0, 0);
+  const start = day.getTime(), end = start + 86400000, span = end - start;
+  let h = '';
+  const done = new Set();
+  (agEvents || []).forEach(ev => {
+    let s = Date.parse(ev.s), e = Date.parse(ev.e);
+    if (ev.allday) {
+      const ds = parseYmd(ev.s).getTime(), de = parseYmd(ev.e).getTime();
+      if (de > start && ds < end && !done.has(ev)) {
+        done.add(ev);
+        h += '<div class="ribbon-ev allday" title="' + esc(ev.title) + '" style="left:0;width:100%"></div>';
+      }
+      return;
+    }
+    if (!isFinite(s) || !isFinite(e) || e <= start || s >= end) return;
+    s = Math.max(s, start); e = Math.min(e, end);
+    const left = (s - start) / span * 100, width = Math.max(.6, (e - s) / span * 100);
+    h += '<div class="ribbon-ev" title="' + esc(ev.title) + '" style="left:' + left + '%;width:' + width + '%">' + esc(ev.title) + '</div>';
+  });
+  if (WX && WX.sunrise && WX.sunset) {
+    [WX.sunrise, WX.sunset].forEach(t => {
+      const ms = Date.parse(t);
+      if (isFinite(ms) && ms >= start && ms < end) {
+        const left = (ms - start) / span * 100;
+        h += '<div class="ribbon-sun" title="Sun" style="left:' + left + '%"></div>';
+      }
+    });
+  }
+  box.innerHTML = h;
+  updateRibbonNow();
+}
+function updateRibbonNow() {
+  if (!S.ribbon) return;
+  const n = $('ribbonNow'); if (!n) return;
+  const now = new Date();
+  const start = new Date(); start.setHours(0, 0, 0, 0);
+  n.style.left = ((now.getTime() - start.getTime()) / 86400000 * 100) + '%';
+}
+
+// ---- advice engine
+function currentTimedEvent() {
+  const now = Date.now();
+  let cur = null;
+  (agEvents || []).forEach(ev => {
+    if (ev.allday) return;
+    const s = Date.parse(ev.s), e = Date.parse(ev.e);
+    if (s <= now && e > now && (!cur || s > Date.parse(cur.s))) cur = ev;
+  });
+  return cur;
+}
+function nextTimedEvent() {
+  const now = Date.now();
+  let best = null;
+  (agEvents || []).forEach(ev => {
+    if (ev.allday) return;
+    const s = Date.parse(ev.s);
+    if (s > now && (!best || s < Date.parse(best.s))) best = ev;
+  });
+  return best;
+}
+function rainSoon() {
+  if (!WX || !WX.hourly || !WX.current) return null;
+  const now = Date.now();
+  const hs = WX.hourly;
+  for (let i = 0; i < hs.time.length; i++) {
+    const t = Date.parse(hs.time[i]);
+    if (t < now - 1800000) continue;
+    if (t > now + 4 * 3600000) break;
+    const p = hs.precipitation_probability[i] || 0;
+    if (p >= 50) return {p: p, at: t};
+  }
+  if ((WX.current.weather_code || 0) >= 51) return {p: 100, at: now};
+  return null;
+}
+function computeAdvice() {
+  const now = Date.now();
+  const cur = currentTimedEvent();
+  if (cur) return {html: 'Meeting now: <b>' + esc(cur.title) + '</b> · <i>ends in ' + dur(Date.parse(cur.e) - now, cur.e) + '</i>', action: null};
+  if (S.focusEnd > now) return {html: 'Focus in progress · <b>' + niceTime(S.focusEnd - now) + '</b> left', action: showFocus};
+  if (S.sleepEnd > now) return {html: 'Sleep timer · <b>' + niceTime(S.sleepEnd - now) + '</b> left', action: null};
+  const next = nextTimedEvent();
+  if (next) {
+    const diff = Date.parse(next.s) - now;
+    if (diff < 30 * 60000) return {html: 'Next: <b>' + esc(next.title) + '</b> · <i>in ' + dur(diff, next.s) + '</i>', action: null};
+  }
+  const rain = rainSoon();
+  if (rain) return {html: rain.p >= 90 && rain.at <= now + 3600000 ? 'Rain is likely within the hour — take an umbrella.' : 'Rain possible in the next 4 hours — keep an umbrella nearby.', action: null};
+  const h = new Date().getHours();
+  if (h >= 22 || h < 6) return {html: 'It is late. <b>Tap for a 30-minute sleep timer.</b>', action: () => startSleep(30)};
+  if (h >= 8 && h < 18) {
+    const in2h = (agEvents || []).some(ev => !ev.allday && Date.parse(ev.s) > now && Date.parse(ev.s) < now + 2 * 3600000);
+    if (!in2h) return {html: 'Nothing scheduled for 2 hours. <b>Tap to start focus.</b>', action: () => startFocus(S.focusLen)};
+  }
+  return {html: 'All clear. <b>Tap to start a focus block.</b>', action: () => startFocus(S.focusLen)};
+}
+function updateAdvice() {
+  const a = computeAdvice();
+  adviceAction = a.action;
+  const e = $('advice');
+  if (!e) return;
+  e.innerHTML = a.html || '';
+  e.style.opacity = a.action ? '1' : '.78';
+}
+
+// ---- focus and sleep timers
+function showFocus() { $('focusScreen').classList.add('on'); tickTimers(); }
+function startFocus(min) {
+  S.focusLen = min;
+  S.focusEnd = Date.now() + min * 60000;
+  save(); refreshSettings();
+  $('focusKicker').textContent = 'Focus · ' + min + ' min';
+  $('focusSub').textContent = 'Music keeps playing. Use the Spotify tile when you are ready to choose something.';
+  showFocus();
+  notify('Focus started for ' + min + ' minutes');
+}
+function endFocus(completed) {
+  const was = S.focusEnd > Date.now();
+  S.focusEnd = 0; save(); refreshSettings();
+  $('focusScreen').classList.remove('on');
+  updateAdvice();
+  if (completed) notify('Focus complete. Nice work.');
+  else if (was) notify('Focus ended');
+}
+function cancelFocus() { S.focusEnd = 0; save(); $('focusScreen').classList.remove('on'); refreshSettings(); updateAdvice(); }
+function startSleep(min) {
+  S.sleepEnd = Date.now() + min * 60000;
+  S.sleepOrigVol = st && st.volume != null ? st.volume : 50;
+  save(); refreshSettings();
+  notify('Sleep timer set for ' + min + ' minutes');
+  updateAdvice();
+}
+function cancelSleep() {
+  const active = S.sleepEnd > Date.now(), orig = S.sleepOrigVol;
+  S.sleepEnd = 0; S.sleepOrigVol = null; save(); refreshSettings(); updateAdvice();
+  if (active && orig != null) {
+    fetch('/api/volume?percent=' + clampPct(orig), {method: 'POST'})
+      .then(() => setTimeout(poll, 600)).catch(() => {});
+  }
+}
+
+function tickTimers() {
+  const now = Date.now();
+  let badge = '';
+  if (S.focusEnd > now) {
+    badge = 'Focus · ' + niceTime(S.focusEnd - now);
+    if ($('focusTimer')) $('focusTimer').textContent = niceTime(S.focusEnd - now);
+  } else if (S.focusEnd && S.focusEnd <= now) {
+    endFocus(true);
+  }
+  if (S.sleepEnd > now) {
+    const rem = S.sleepEnd - now;
+    if (!badge) badge = 'Sleep · ' + (rem >= 60000 ? Math.ceil(rem / 60000) + ' min' : niceTime(rem));
+    if (rem <= 60000 && st && st.state === 'ok' && now - sleepLastFade > 5000) {
+      sleepLastFade = now;
+      const orig = S.sleepOrigVol != null ? S.sleepOrigVol : (st.volume != null ? st.volume : 50);
+      const target = Math.max(0, Math.round(orig * rem / 60000));
+      fetch('/api/volume?percent=' + target, {method: 'POST'})
+        .then(() => { st.volume = target; setVol(target); }).catch(() => {});
+    }
+  } else if (S.sleepEnd && S.sleepEnd <= now) {
+    const orig = S.sleepOrigVol;
+    S.sleepEnd = 0; S.sleepOrigVol = null; save();
+    fetch('/api/pause', {method: 'POST'})
+      .catch(() => {})
+      .then(() => { if (orig != null) return fetch('/api/volume?percent=' + clampPct(orig), {method: 'POST'}); })
+      .catch(() => {});
+    setTimeout(poll, 900);
+    notify('Sleep timer complete. Music paused.');
+    refreshSettings();
+  }
+  const tb = $('timerBadge');
+  tb.textContent = badge;
+  tb.classList.toggle('on', !!badge);
+  if ($('idleScreen').classList.contains('on')) updateIdleText();
+  if ($('guestScreen').classList.contains('on')) {
+    if (S.guestEnd && S.guestEnd <= now) endGuest(); else updateGuest();
+  }
+  checkWake(now);
+  tickMeeting(now);
+}
+
+// ---- meeting mode
+function tickMeeting(now) {
+  const ev = currentTimedEvent();
+  const key = ev ? ev.title + '|' + ev.s + '|' + ev.e : '';
+  if (key !== meetingKey) {
+    if (!ev && meetingPaused) {
+      meetingPaused = false;
+      fetch('/api/play', {method: 'POST'}).then(() => setTimeout(poll, 800)).catch(() => {});
+      notify('Meeting ended — resuming music');
+    }
+    meetingKey = key;
+  }
+  if (ev) {
+    if (S.meetingPause && st && st.state === 'ok' && st.playing && !meetingPaused) {
+      meetingPaused = true;
+      fetch('/api/pause', {method: 'POST'}).then(() => setTimeout(poll, 800)).catch(() => {});
+      notify('Meeting mode: music paused');
+    }
+    $('meetingBanner').classList.add('on');
+    $('meetingTitle').textContent = ev.title;
+    $('meetingTime').textContent = 'ends in ' + dur(Date.parse(ev.e) - now, ev.e);
+  } else {
+    $('meetingBanner').classList.remove('on');
+  }
+}
+
+// ---- wake routine
+function checkWake(now) {
+  if (!S.wakeAt || !/^\d\d:\d\d$/.test(S.wakeAt)) return;
+  const today = ymd(new Date());
+  if (S.lastWake === today) return;
+  const p = S.wakeAt.split(':').map(Number);
+  const at = new Date(); at.setHours(p[0], p[1], 0, 0);
+  if (now < at.getTime() || now - at.getTime() > 20 * 60000) return;
+  S.lastWake = today; save();
+  if (S.wakeResume) fetch('/api/play', {method: 'POST'}).then(() => setTimeout(poll, 1200)).catch(() => {});
+  if (S.autoDim) {
+    let pct = Math.max(5, S.nightPct), n = 0;
+    const step = () => {
+      fetch('/api/brightness?percent=' + Math.min(60, pct), {method: 'POST'}).catch(() => {});
+      pct += 10; n++;
+      if (n < 6) setTimeout(step, 20000);
+    };
+    step();
+  }
+  notify('Good morning');
+  showMorningBrief(true);
+}
+
+// ---- guest mode
+function updateGuest() {
+  const now = new Date();
+  $('guestTime').textContent = now.toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'});
+  $('guestWeather').textContent = WX && WX.current ? Math.round(WX.current.temperature_2m) + '°C · ' + WC(WX.current.weather_code) : '--';
+  $('guestWifi').textContent = NET && NET.ssid ? NET.ssid : 'Wired';
+  const rem = S.guestEnd - Date.now();
+  $('guestTip').textContent = rem > 0
+    ? 'Tap to play/pause · four-finger swipe up to exit · ' + niceTime(rem) + ' left'
+    : 'Tap to play/pause · four-finger swipe up to exit';
+}
+const wifiQrEscape = s => String(s).replace(/([\\;,":])/g, '\\$1');
+async function loadGuestQr() {
+  const card = $('guestQr');
+  if (typeof qrcode !== 'function') { card.classList.add('hide'); return; }
+  let creds = {};
+  try { creds = await (await fetch('/api/wifi-credentials')).json(); } catch (e) {}
+  const ssid = creds.ssid || (NET && NET.ssid) || '';
+  if (!ssid) { card.classList.add('hide'); return; }
+  const psk = creds.password || '';
+  const key = ssid + '|' + psk;
+  if (key === guestQrKey) { card.classList.remove('hide'); return; }
+  try {
+    const payload = 'WIFI:T:' + (psk ? 'WPA' : 'nopass') + ';S:' + wifiQrEscape(ssid) +
+      (psk ? ';P:' + wifiQrEscape(psk) : '') + ';;';
+    const qr = qrcode(0, 'M');
+    qr.addData(payload); qr.make();
+    $('guestQrBox').innerHTML = qr.createSvgTag({cellSize: 3, margin: 1, scalable: true});
+    $('guestQrLabel').textContent = psk ? 'Scan to join ' + ssid : 'Wi-Fi · ' + ssid;
+    guestQrKey = key;
+    card.classList.remove('hide');
+  } catch (e) { card.classList.add('hide'); }
+}
+function startGuest(min) {
+  S.guestEnd = Date.now() + min * 60000; save(); refreshSettings();
+  $('guestScreen').classList.add('on');
+  updateGuest(); loadGuestQr(); notify('Guest mode on for ' + min + ' minutes');
+}
+function endGuest() {
+  S.guestEnd = 0; save(); refreshSettings();
+  $('guestScreen').classList.remove('on');
+  notify('Guest mode ended');
+}
+
+// ---- morning brief
+const FUN_FACTS = [
+  'A group of flamingos is called a flamboyance.',
+  'Honey never spoils. Archaeologists have found edible honey in ancient Egyptian tombs.',
+  'Octopuses have three hearts and blue blood.',
+  'Bananas are berries, but strawberries are not.',
+  'A day on Venus is longer than a year on Venus.',
+  'The Eiffel Tower can grow about 15 cm taller in summer because metal expands in heat.',
+  'Sharks existed before trees.',
+  'A cloud can weigh more than a million pounds.',
+  'The human nose can detect over one trillion different scents.',
+  'Wombat droppings are cube-shaped.',
+  'There are more possible chess games than atoms in the observable universe.',
+  'The first computer bug was an actual moth found in a relay in 1947.',
+  'Some turtles can breathe through their rear ends.',
+  'A single strand of spaghetti is called a spaghetto.',
+  'Sea otters hold hands while sleeping so they do not drift apart.',
+  'The keyboard layout QWERTZ was designed around German-language typewriters.',
+  'Sound travels about four times faster in water than in air.',
+  'The Moon is slowly moving away from Earth at about 3.8 cm per year.',
+  'Cats have no sweet taste receptor.',
+  'A bolt of lightning can be hotter than the surface of the Sun.',
+  'The word "robot" comes from the Czech word robota, meaning forced labor.',
+  'Tree rings can record the year of major solar storms.',
+  'There are more trees on Earth than stars in the Milky Way.',
+  'Hot water can freeze faster than cold water under some conditions.',
+  'The Pythagorean theorem was used in Babylon over 1,000 years before Pythagoras.',
+  'A snail can sleep for several days at a time.',
+  'The Great Wall of China is not a single continuous wall.',
+  'Butterflies taste with their feet.',
+  'The human body contains enough iron to make a small nail.',
+  'The highest recorded temperature on Earth was 56.7 degrees Celsius.'
+];
+function factOfDay() {
+  const d = new Date();
+  const start = new Date(d.getFullYear(), 0, 0);
+  const day = Math.floor((d - start) / 86400000);
+  return FUN_FACTS[(day + d.getFullYear()) % FUN_FACTS.length];
+}
+function maybeMorningBrief(force) { showMorningBrief(!!force); }
+function showMorningBrief(force) {
+  if (!S.brief && !force) return;
+  if (!force) {
+    const hour = new Date().getHours();
+    if (hour < 4 || hour >= 12) return;
+    if (S.lastBrief === ymd(new Date())) return;
+  }
+  if (!force && ($('sheet').classList.contains('open') || $('picker').classList.contains('open'))) {
+    setTimeout(() => showMorningBrief(false), 10000);
+    return;
+  }
+  if (!WX) {
+    if (briefTries++ < 6) setTimeout(() => showMorningBrief(force), 2000);
+    return;
+  }
+  if (calMsg === 'Loading calendar...' && briefTries++ < 6) {
+    setTimeout(() => showMorningBrief(force), 1800);
+    return;
+  }
+  if (featureMode() && featureMode() !== 'idle') return;
+  $('idleScreen').classList.remove('on');
+  const now = new Date(), h = now.getHours();
+  $('briefGreeting').textContent = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+  $('briefDate').textContent = now.toLocaleDateString('en-GB', {weekday: 'long', day: 'numeric', month: 'long'});
+  const cur = currentTimedEvent(), nxt = nextTimedEvent();
+  const ev = cur || nxt;
+  const evText = ev ? esc(ev.title) + '<br>' + (ev.allday ? 'All day' : tmOf(ev.s) + (ev.e !== ev.s ? ' – ' + tmOf(ev.e) : '')) : (calConfigured ? 'Nothing scheduled' : 'No calendar linked');
+  const c = WX.current || {};
+  const rain = WX.daily && WX.daily.precipitation_probability_max ? WX.daily.precipitation_probability_max[0] : null;
+  const weather = Math.round(c.temperature_2m || 0) + '°C · ' + WC(c.weather_code || 0) + (rain != null ? ' · rain ' + rain + '%' : '');
+  const music = st && st.state === 'ok' ? esc(st.title) + '<br>' + esc(st.artist) : 'Nothing playing';
+  const aqi = WX.aqi != null ? 'AQI ' + WX.aqi + '<br>' + AQC(WX.aqi) : 'Air quality<br>--';
+  $('briefGrid').innerHTML =
+    '<div>Weather<b>' + weather + '</b></div>' +
+    '<div>' + (cur ? 'Now' : 'First up') + '<b>' + evText + '</b></div>' +
+    '<div>Music<b>' + music + '</b></div>' +
+    '<div>' + aqi + '</div>';
+  $('briefAdvice').innerHTML = computeAdvice().html || '';
+  $('briefFact').textContent = factOfDay();
+  $('briefScreen').classList.add('on');
+  S.lastBrief = ymd(new Date()); save();
+}
+
+// ---- hidden system health
+async function openHealth() {
+  $('healthScreen').classList.add('on');
+  $('healthUpdated').textContent = 'Reading metrics…';
+  $('healthGrid').innerHTML = '';
+  try {
+    const j = await (await fetch('/api/health')).json();
+    const h = j;
+    const card = (label, value, warn) => '<div class="health-card' + (warn ? ' warn' : '') + '"><span>' + label + '</span><b>' + value + '</b></div>';
+    const up = h.uptime != null ? Math.floor(h.uptime / 3600) + 'h ' + Math.floor(h.uptime % 3600 / 60) + 'm' : '--';
+    $('healthGrid').innerHTML =
+      card('Host', esc(h.hostname || '--')) +
+      card('Uptime', up) +
+      card('Load 1m', (h.load && h.load[0]) != null ? h.load[0] : '--', h.load && h.load[0] > 2) +
+      card('Memory', h.memory ? h.memory.used_mb + ' / ' + h.memory.total_mb + ' MB' : '--', h.memory && h.memory.percent > 85) +
+      card('Disk', h.disk ? h.disk.used_gb + ' / ' + h.disk.total_gb + ' GB' : '--', h.disk && h.disk.percent > 90) +
+      card('CPU temp', h.temperature_c != null ? h.temperature_c + ' °C' : 'n/a', h.temperature_c > 75) +
+      card('Chromium', h.chromium ? h.chromium.processes + ' proc · ' + h.chromium.rss_mb + ' MB' : '--') +
+      card('Kiosk', h.services ? h.services.kiosk + ' · ' + h.services.kiosk_restarts + ' restarts' : '--', h.services && h.services.kiosk !== 'active') +
+      card('Dashboard', h.services ? h.services.dashboard : '--', h.services && h.services.dashboard !== 'active');
+    $('healthUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'});
+  } catch (e) {
+    $('healthUpdated').textContent = 'Could not read metrics';
+  }
+}
+function closeHealth() { $('healthScreen').classList.remove('on'); }
+
+// ---- synced lyrics + album colours
+let lyricsKey = '', lyricsLines = [], lyricsEls = [], lyricsIndex = -1, lyricsSynced = false, lyricsBusy = false, lyricsAgain = false;
+let lyricsScrollY = 0, lyricsManualUntil = 0;
+let albumColors = ['242,184,75', '118,76,42'];
+let guestQrKey = '';
+let volumeHideTimer = 0, lyricsVolumeHideTimer = 0;
+function updateLyricsProgress(valueMs) {
+  if (!$('lyricsScreen').classList.contains('on') || !st || st.state !== 'ok') return;
+  const p = valueMs != null ? valueMs : st.progress + (st.playing ? Date.now() - tFetch : 0);
+  paintLyricsProgress(p / (st.duration || 1), p);
+}
+function showVolumeControls() {
+  const e = document.querySelector('#spotifyTile .mright');
+  if (!e) return;
+  e.classList.remove('idle');
+  clearTimeout(volumeHideTimer);
+  volumeHideTimer = setTimeout(() => e.classList.add('idle'), 4500);
+}
+function showLyricsVolume(v) {
+  const e = $('lyricsVolume');
+  if (!e) return;
+  v = Math.max(0, Math.min(1, Number(v) || 0));
+  $('lyricsVolumeFill').style.height = (v * 100) + '%';
+  e.classList.add('on');
+  clearTimeout(lyricsVolumeHideTimer);
+  lyricsVolumeHideTimer = setTimeout(() => e.classList.remove('on'), 1800);
+}
+function albumFallback(src) {
+  const palettes = [
+    ['242,184,75', '118,76,42'], ['78,152,190', '42,70,118'], ['170,105,190', '69,44,98'],
+    ['95,180,140', '37,86,70'], ['220,110,95', '104,46,42'], ['130,145,220', '48,55,122']
+  ];
+  let h = 0; String(src || '').split('').forEach(c => { h = (h * 31 + c.charCodeAt(0)) >>> 0; });
+  return palettes[h % palettes.length];
+}
+function applyAmbient() {
+  const tile = $('spotifyTile'), glow = $('ambientGlow');
+  const level = S.ambient ? Math.max(0, Math.min(100, Number(S.ambientLevel) || 0)) : 0;
+  if (!level) {
+    tile.classList.remove('ambient');
+    tile.style.background = '';
+    if (glow) glow.style.opacity = '0';
+    return;
+  }
+  const a = albumColors[0], b = albumColors[1];
+  const a1 = (0.08 + level / 100 * 0.30).toFixed(3);
+  const a2 = (0.05 + level / 100 * 0.22).toFixed(3);
+  tile.classList.add('ambient');
+  tile.style.background =
+    'radial-gradient(circle at 12% 8%,rgba(' + a + ',' + a1 + '),transparent 46%),' +
+    'radial-gradient(circle at 92% 88%,rgba(' + b + ',' + a2 + '),transparent 48%),var(--bg)';
+  if (glow) {
+    glow.style.background =
+      'radial-gradient(circle at 14% 10%,rgba(' + a + ',.55),transparent 42%),' +
+      'radial-gradient(circle at 86% 86%,rgba(' + b + ',.42),transparent 48%)';
+    glow.style.opacity = (level / 100 * 0.58).toFixed(2);
+  }
+  $('lyricsScreen').style.background =
+    'radial-gradient(circle at 20% 12%,rgba(' + a + ',.22),transparent 55%),' +
+    'radial-gradient(circle at 85% 90%,rgba(' + b + ',.18),transparent 60%),var(--bg)';
+}
+function setAmbience(v) {
+  v = Math.max(0, Math.min(100, Math.round(Number(v) || 0)));
+  S.ambientLevel = v;
+  S.ambient = v > 0;
+  save(); refreshSettings(); applyAmbient();
+}
+function setAlbumColors(a, b) {
+  albumColors = [a, b];
+  const tile = $('spotifyTile');
+  tile.style.setProperty('--alb1', a);
+  tile.style.setProperty('--alb2', b);
+  applyAmbient();
+}
+function updateAlbumAmbience(src) {
+  if (!src) { const f = albumFallback(st && st.title); setAlbumColors(f[0], f[1]); return; }
+  const fallback = albumFallback(src);
+  setAlbumColors(fallback[0], fallback[1]);
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    try {
+      const cv = document.createElement('canvas'); cv.width = cv.height = 18;
+      const cx = cv.getContext('2d', {willReadFrequently: true});
+      cx.drawImage(img, 0, 0, 18, 18);
+      const data = cx.getImageData(0, 0, 18, 18).data;
+      const buckets = {};
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i], g = data[i + 1], b = data[i + 2];
+        if (r + g + b < 80 || r + g + b > 700) continue;
+        const k = (r >> 4) + ',' + (g >> 4) + ',' + (b >> 4);
+        const o = buckets[k] || (buckets[k] = [0, 0, 0, 0]);
+        o[0] += r; o[1] += g; o[2] += b; o[3]++;
+      }
+      const cols = Object.values(buckets).sort((x, y) => y[3] - x[3]).slice(0, 2);
+      if (cols.length) {
+        const a = cols[0], b = cols[1] || cols[0];
+        setAlbumColors([Math.round(a[0] / a[3]), Math.round(a[1] / a[3]), Math.round(a[2] / a[3])].join(','),
+                       [Math.round(b[0] / b[3]), Math.round(b[1] / b[3]), Math.round(b[2] / b[3])].join(','));
+      }
+    } catch (e) {}
+  };
+  img.src = src;
+}
+function parseLyrics(synced, plain) {
+  if (synced) {
+    const out = [];
+    synced.split(/\r?\n/).forEach(line => {
+      const tags = [...line.matchAll(/\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\]/g)];
+      if (!tags.length) return;
+      const text = line.replace(/\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\]/g, '').trim();
+      tags.forEach(m => {
+        const frac = m[3] ? parseFloat('0.' + m[3]) : 0;
+        out.push({t: (+m[1]) * 60 + (+m[2]) + frac, text: text || '♪'});
+      });
+    });
+    out.sort((a, b) => a.t - b.t);
+    return out.length ? {synced: true, lines: out} : null;
+  }
+  if (plain) return {synced: false, lines: plain.split(/\r?\n/).filter(x => x.trim()).map(text => ({t: 0, text}))};
+  return null;
+}
+async function loadLyrics(force) {
+  if (!st || st.state !== 'ok') {
+    $('lyrTitle').textContent = 'Nothing playing';
+    $('lyrArtist').textContent = 'Start Spotify first';
+    $('lyricsLines').innerHTML = '';
+    return;
+  }
+  const key = st.title + '|' + st.artist + '|' + st.duration;
+  $('lyrTitle').textContent = st.title;
+  $('lyrArtist').textContent = st.artist;
+  if (st.art) $('lyrArt').src = st.art;
+  if (!force && key === lyricsKey) return;
+  lyricsKey = key; lyricsLines = []; lyricsEls = []; lyricsIndex = -1;
+  lyricsScrollY = 0; lyricsManualUntil = 0;
+  $('lyricsScreen').classList.remove('no-sync');
+  $('lyricsLines').style.transform = 'translateY(0px)';
+  $('lyricsLines').innerHTML = '<div class="lyric-line now">Searching lyrics…</div>';
+  if (lyricsBusy) { lyricsAgain = true; return; }
+  lyricsBusy = true;
+  try {
+    const q = '?title=' + encodeURIComponent(st.title || '') + '&artist=' + encodeURIComponent(st.artist || '') + '&duration=' + Math.round((st.duration || 1) / 1000);
+    const j = await (await fetch('/api/lyrics' + q)).json();
+    if (lyricsKey !== key) return;
+    const parsed = j.found ? parseLyrics(j.synced, j.plain) : null;
+    if (!parsed) {
+      $('lyricsScreen').classList.add('no-sync');
+      $('lyricsLines').innerHTML = '<div class="lyric-line now">No synced lyrics found.</div>';
+      setAlbumColors.apply(null, albumFallback(st.art));
+      return;
+    }
+    lyricsSynced = parsed.synced;
+    lyricsLines = parsed.lines;
+    $('lyricsScreen').classList.toggle('no-sync', !lyricsSynced);
+    $('lyricsLines').innerHTML = lyricsLines.map(x => '<div class="lyric-line">' + esc(x.text) + '</div>').join('');
+    lyricsEls = [...$('lyricsLines').children];
+    lyricsIndex = -1;
+    lyricsScrollY = 0; lyricsManualUntil = 0;
+    syncLyricsProgress(true);
+  } catch (e) {
+    $('lyricsLines').innerHTML = '<div class="lyric-line now">Could not load lyrics.</div>';
+  } finally {
+    lyricsBusy = false;
+    if (lyricsAgain) { lyricsAgain = false; if ($('lyricsScreen').classList.contains('on')) setTimeout(() => loadLyrics(true), 0); }
+  }
+}
+function openLyrics() {
+  if (!st || st.state !== 'ok') { notify('Start Spotify before opening lyrics'); return; }
+  $('lyricsScreen').classList.add('on');
+  updateLyricsProgress();
+  loadLyrics(false);
+}
+function closeLyrics() { $('lyricsScreen').classList.remove('on'); }
+function syncLyricsProgress(force) {
+  if (!$('lyricsScreen').classList.contains('on') || !lyricsSynced || !lyricsLines.length || !st || st.state !== 'ok') return;
+  const p = (st.progress + (st.playing ? Date.now() - tFetch : 0)) / 1000 + (Number(S.lyricsOffset) || 0);
+  let idx = -1;
+  for (let i = 0; i < lyricsLines.length; i++) if (lyricsLines[i].t <= p) idx = i; else break;
+  if (idx === lyricsIndex && !force) return;
+  lyricsIndex = idx;
+  lyricsEls.forEach((e, i) => { e.classList.toggle('now', i === idx); e.classList.toggle('near', i === idx + 1 || i === idx - 1); });
+  if (idx >= 0 && lyricsEls[idx] && Date.now() >= lyricsManualUntil) {
+    const box = $('lyricsBox'), line = lyricsEls[idx];
+    const focusY = box.clientHeight * 0.38;
+    lyricsScrollY = focusY - line.offsetTop - line.offsetHeight / 2;
+    $('lyricsLines').style.transform = 'translateY(' + lyricsScrollY + 'px)';
+  }
+}
+function onTrackChanged() {
+  if (st && st.state === 'ok') {
+    updateAlbumAmbience(st.art);
+    if ($('lyricsScreen').classList.contains('on')) loadLyrics(true);
+  }
+  updateAdvice();
+}
+
+// ---- feature overlay control (called by the trackpad gesture layer)
+function featureMode() {
+  if ($('focusScreen').classList.contains('on')) return 'focus';
+  if ($('lyricsScreen').classList.contains('on')) return 'lyrics';
+  if ($('healthScreen').classList.contains('on')) return 'health';
+  if ($('briefScreen').classList.contains('on')) return 'brief';
+  if ($('guestScreen').classList.contains('on')) return 'guest';
+  if ($('idleScreen').classList.contains('on')) return 'idle';
+  return '';
+}
+function featureTap() {
+  noteActivity();
+  const m = featureMode();
+  if (m === 'focus') endFocus(false);
+  else if (m === 'lyrics') closeLyrics();
+  else if (m === 'health') closeHealth();
+  else if (m === 'brief') $('briefScreen').classList.remove('on');
+  else if (m === 'guest') { $('pp').click(); notify(st && st.playing ? 'Playing' : 'Paused', 1000); }
+}
+function featureSlide(dir) {
+  noteActivity();
+  if (featureMode() !== 'lyrics' || (dir !== 'up' && dir !== 'down')) return;
+  if (!lyricsLines.length) return;
+  lyricsManualUntil = Date.now() + 8000;
+  const box = $('lyricsBox'), lines = $('lyricsLines');
+  const step = Math.max(48, (lyricsEls[0] ? lyricsEls[0].offsetHeight : 60) * 1.15);
+  lyricsScrollY += dir === 'down' ? -step : step;
+  const minY = Math.min(0, box.clientHeight - lines.scrollHeight);
+  lyricsScrollY = Math.max(minY, Math.min(180, lyricsScrollY));
+  lines.style.transform = 'translateY(' + lyricsScrollY + 'px)';
+}
+function featureClose() {
+  const m = featureMode();
+  if (m === 'focus') endFocus(false);
+  else if (m === 'lyrics') closeLyrics();
+  else if (m === 'health') closeHealth();
+  else if (m === 'brief') $('briefScreen').classList.remove('on');
+  else if (m === 'guest') endGuest();
+}
+
+// ---- initialisation / timers
+applyTheme();
+applyDayNight();
+refreshSettings();
+applyAmbient();
+renderRibbon();
+updateAdvice();
+setInterval(() => { if (S.theme === 'auto') applyTheme(); }, 30000);
+setInterval(() => { applyDayNight(); updateAdvice(); }, 60000);
+setInterval(tickTimers, 1000);
+setInterval(updateRibbonNow, 30000);
+setTimeout(() => { if (st) onTrackChanged(); }, 4000);
+setTimeout(() => showMorningBrief(false), 6000);
+if (S.focusEnd > Date.now()) showFocus();
+if (S.guestEnd > Date.now()) { $('guestScreen').classList.add('on'); updateGuest(); loadGuestQr(); }
+else if (S.guestEnd) { S.guestEnd = 0; save(); }
+showVolumeControls();
+noteActivity();
+
+</script>
+<style id="tp3-style">
+*{cursor:none!important}
+button{transition:transform .08s ease,opacity .08s ease}
+button:active,.clk:active{opacity:.55;transform:scale(.94)}
+#tp-ring{position:fixed;z-index:60;box-sizing:border-box;border:.6vh solid var(--acc);pointer-events:none;opacity:0;transition:opacity .22s ease}
+#tp-ring.on{opacity:1;transition:none}
+#tp-hud{position:fixed;left:50%;bottom:4vh;transform:translateX(-50%);padding:1vh 2.4vh;border-radius:3vh;background:var(--bg);border:1px solid var(--line);color:var(--fg);font-size:2.2vh;z-index:70;opacity:0;pointer-events:none;transition:opacity .2s;white-space:nowrap}
+#tp-hud.on{opacity:1}
+</style>
+<script id="tp3-script">
+(() => {
+  const $$ = id => document.getElementById(id);
+  const sheet = $$('sheet'), picker = $$('picker');
+  const clamp = v => Math.max(0, Math.min(1, v));
+  const frac = s => clamp((parseFloat(s) || 0) / 100);
+  const isOpen = () => sheet.classList.contains('open');
+
+  // scroll feel: a velocity curve shaped like libinput's default. Gain stays low for
+  // slow, deliberate movement and ramps up linearly for fast flicks.
+  const CURVE = {lo: 0.08, hi: 2.5, v0: 0.5, v1: 4};  // very slow floor; middle/top response unchanged
+  const PX = {sheet: 300, list: 200};                // finger travel per list step at gain 1
+  const K = {cal: 0.5, fc: 0.5, hours: 0.3};         // speed of the calendar and forecast scrollers
+
+  let vlast = 0, vv = 0;
+  function gain(e) {  // once per wheel event
+    const now = performance.now(), dt = now - vlast;
+    vlast = now;
+    const inst = dt > 150 ? 0.4 : Math.hypot(e.deltaX, e.deltaY) / Math.max(dt, 4);
+    vv = dt > 150 ? inst : vv * 0.6 + inst * 0.4;
+    return CURVE.lo + (CURVE.hi - CURVE.lo) * clamp((vv - CURVE.v0) / (CURVE.v1 - CURVE.v0));
+  }
+  function nudge(n, prop, d) {  // scrollTop/Left drop fractions, so keep the remainder
+    const key = '_' + prop;
+    n[key] = (n[key] || 0) + d;
+    const whole = Math.trunc(n[key]);
+    if (whole) { n[key] -= whole; n[prop] += whole; }
+  }
+
+  // is an element actually on screen and interactive?
+  const shown = el => {
+    const r = el.getBoundingClientRect();
+    if (r.width < 2 || r.height < 2 || r.bottom <= 0 || r.right <= 0 ||
+        r.top >= innerHeight || r.left >= innerWidth) return false;
+    const s = getComputedStyle(el);
+    return s.display !== 'none' && s.visibility !== 'hidden' && +s.opacity > 0.05 && s.pointerEvents !== 'none';
+  };
+  const menuEl = () => ['devmenu', 'amenu'].map($$).find(shown) || null;
+
+  // ---- sound: small synthesized cues, no files. Sparse and short, one pitch family
+  // (G: D5 587, G5 784, D6 1175). Every tone fades to silence so it ends without a click.
+  const VOL = 0.35;  // master volume, 0 (off) to 1
+  let actx = null, master = null, noiseBuf = null, warned = false;
+  const lastAt = {}, GAP = {tick: 35, bump: 150};
+  function audio() {
+    if (!actx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      actx = new AC({latencyHint: 'interactive'});
+      master = actx.createGain();
+      master.gain.value = VOL;
+      const lp = actx.createBiquadFilter();
+      lp.type = 'lowpass'; lp.frequency.value = 5000;
+      master.connect(lp); lp.connect(actx.destination);
+      noiseBuf = actx.createBuffer(1, Math.floor(actx.sampleRate * 0.05), actx.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    if (actx.state === 'suspended') actx.resume();
+    return actx;
+  }
+  function tone(t, f0, f1, dur, peak, type) {
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type || 'sine';
+    o.frequency.setValueAtTime(f0, t);
+    if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(peak, t + 0.003);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(master);
+    o.start(t); o.stop(t + dur + 0.02);
+  }
+  function puff(t, dur, peak, freq) {  // short filtered noise burst: the click transient
+    const s = actx.createBufferSource(), f = actx.createBiquadFilter(), g = actx.createGain();
+    s.buffer = noiseBuf;
+    f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = 1.2;
+    g.gain.setValueAtTime(peak, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    s.connect(f); f.connect(g); g.connect(master);
+    s.start(t); s.stop(t + dur + 0.01);
+  }
+  const CUE = {
+    tick:   t => tone(t, 2000, 1700, 0.022, 0.22),
+    select: t => { puff(t, 0.012, 0.35, 3200); tone(t, 1200, 800, 0.055, 0.30); },
+    open:   t => { tone(t, 587, 587, 0.07, 0.22); tone(t + 0.06, 784, 784, 0.09, 0.22); },
+    close:  t => { tone(t, 784, 784, 0.06, 0.20); tone(t + 0.055, 587, 587, 0.09, 0.20); },
+    next:   t => { tone(t, 784, 784, 0.05, 0.22); tone(t + 0.05, 1175, 1175, 0.08, 0.22); },
+    prev:   t => { tone(t, 1175, 1175, 0.05, 0.22); tone(t + 0.05, 784, 784, 0.08, 0.22); },
+    toggle: t => { puff(t, 0.012, 0.30, 1800); tone(t, 660, 520, 0.07, 0.32); },
+    bump:   t => tone(t, 300, 220, 0.04, 0.25, 'triangle'),
+    arm:    t => { tone(t, 1760, 1760, 0.03, 0.22); tone(t + 0.08, 2200, 2200, 0.03, 0.22); }
+  };
+  function snd(name) {
+    if (!VOL) return;
+    try {
+      const now = performance.now();
+      if (now - (lastAt[name] || 0) < (GAP[name] || 80)) return;
+      lastAt[name] = now;
+      if (!audio()) return;
+      CUE[name](actx.currentTime + 0.005);
+      if (!warned && actx.state !== 'running') {
+        warned = true;
+        setTimeout(() => { if (actx.state !== 'running') say('Sound is blocked by the browser', 4000); }, 300);
+      }
+    } catch (_) {}
+  }
+
+  // wrap the dashboard's own functions: track the songs view, and play open/close cues
+  let trackView = false, pendingTracks = false, muteClose = 0;
+  if (typeof showList === 'function') {
+    const o = showList;
+    window.showList = function (...a) {
+      trackView = pendingTracks; pendingTracks = false;
+      snd(shown(picker) ? 'tick' : 'open');
+      return o.apply(this, a);
+    };
+  }
+  if (typeof openTracks === 'function') {
+    const o = openTracks;
+    window.openTracks = async function (...a) {
+      pendingTracks = true;
+      try { return await o.apply(this, a); } finally { pendingTracks = false; }
+    };
+  }
+  if (typeof closePicker === 'function') {
+    const o = closePicker;
+    window.closePicker = function (...a) {
+      if (shown(picker) && performance.now() > muteClose) snd('close');
+      return o.apply(this, a);
+    };
+  }
+  if (typeof openSheet === 'function') {
+    const o = openSheet;
+    window.openSheet = function (...a) { if (!isOpen()) snd('open'); return o.apply(this, a); };
+  }
+  if (typeof closeSheet === 'function') {
+    const o = closeSheet;
+    window.closeSheet = function (...a) { if (isOpen()) snd('close'); return o.apply(this, a); };
+  }
+
+  // mode: which layer the gestures act on
+  let pi = -1, mi = -1, ri = 0, wasP = false, wasM = null, lastFc = null, kbOpen = false, wasSheet = false;
+  const featureOpen = () => (typeof featureMode === 'function' ? featureMode() : '');
+  const idleOpen = () => $$('idleScreen').classList.contains('on');
+  function mode() {
+    if (kbOpen) return 'keys';
+    const p = shown(picker);
+    if (p !== wasP) { wasP = p; pi = -1; }
+    const fc = $$('plist').firstElementChild;
+    if (fc !== lastFc) { lastFc = fc; pi = -1; }
+    if (p) return 'picker';
+    if (featureOpen()) return 'feature';
+    const m = menuEl();
+    if (m !== wasM) { wasM = m; mi = -1; }
+    if (m) return 'menu';
+    const open = isOpen();
+    if (open !== wasSheet) { wasSheet = open; if (open) ri = 0; }
+    return open ? 'sheet' : 'tiles';
+  }
+
+  // ---- hud + flash ring (the ring marks where you just moved to, then fades)
+  const hud = document.createElement('div');
+  hud.id = 'tp-hud';
+  const ring = document.createElement('div');
+  ring.id = 'tp-ring';
+  document.body.append(hud, ring);
+  let hudT = 0, ringT = 0;
+  const say = (txt, ms) => {
+    hud.textContent = txt; hud.classList.add('on');
+    clearTimeout(hudT); hudT = setTimeout(() => hud.classList.remove('on'), ms || 1200);
+  };
+  function flash(el) {
+    const r = el.getBoundingClientRect();
+    Object.assign(ring.style, {
+      left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px',
+      borderRadius: Math.min(innerHeight * 0.03, r.height / 2) + 'px'
+    });
+    ring.classList.add('on');
+    clearTimeout(ringT);
+    ringT = setTimeout(() => ring.classList.remove('on'), 350);
+  }
+
+  // synthetic pointer events drive the dashboard's own sliders and buttons
+  const pe = (el, type, x, y) => el.dispatchEvent(new PointerEvent(type, {
+    pointerId: 1, pointerType: 'mouse', isPrimary: true, bubbles: true, cancelable: true,
+    clientX: x, clientY: y, buttons: type === 'pointerup' ? 0 : 1
+  }));
+
+  // keep a clock drag alive when the pointer leaves the stage
+  $$('stage').addEventListener('pointerdown', e => {
+    try { $$('stage').setPointerCapture(e.pointerId); } catch (_) {}
+  });
+
+  // ---- tiles: three-finger swipe moves the selection
+  const tiles = [...document.querySelectorAll('.grid > .tile')];
+  let fi = 0, ci = -1;
+  const isSpotify = () => tiles[fi].contains($$('pls'));
+  function moveFocus(dir) {
+    const mid = r => ({x: r.left + r.width / 2, y: r.top + r.height / 2});
+    const from = mid(tiles[fi].getBoundingClientRect());
+    let best = -1, bd = 1e9;
+    tiles.forEach((t, i) => {
+      if (i === fi) return;
+      const p = mid(t.getBoundingClientRect()), dx = p.x - from.x, dy = p.y - from.y;
+      const along = dir === 'right' ? dx : dir === 'left' ? -dx : dir === 'down' ? dy : -dy;
+      const across = (dir === 'left' || dir === 'right') ? Math.abs(dy) : Math.abs(dx);
+      if (along > 10 && along + across * 2 < bd) { bd = along + across * 2; best = i; }
+    });
+    if (best >= 0 && best !== fi) { fi = best; ci = -1; sl = 0; snd('tick'); } else snd('bump');
+    flash(tiles[fi]);
+  }
+
+  // Month/Agenda and Now/Daily/Hourly: step through a tile's pill buttons
+  function stepPill(tile, dir) {
+    const b = [...tile.querySelectorAll('.pill button')];
+    let i = b.findIndex(x => x.classList.contains('on'));
+    if (i < 0) i = tile._pi || 0;
+    const j = Math.max(0, Math.min(b.length - 1, i + dir));
+    tile._pi = j;
+    if (j !== i) { snd('tick'); b[j].click(); } else snd('bump');
+  }
+
+  // ---- Spotify tile controls: two-finger sideways picks, tap activates
+  const toggleDevices = () => {
+    const m = $$('msg');
+    if (m.textContent.trim()) m.click();
+    else if (typeof toggleDevMenu === 'function') toggleDevMenu();
+  };
+  // ---- Spotify tile: three layers. Two-finger vertical swipe changes layer, two-finger
+  // horizontal swipe moves along the layer, a tap activates.
+  //   1: Playlists, Up next   2: Devices, Audio output (when shown)   3: Shuffle, Repeat
+  let sl = 0;
+  const layers = () => {
+    const out = [
+      [{n: 'Playlists', el: () => $$('pls'), go: () => $$('pls').click()},
+       {n: 'Lyrics', el: () => $$('lyrBtn'), go: () => openLyrics(), cue: 'open'},
+       {n: 'Up next', el: () => $$('upn'), go: () => $$('upn').click()}],
+      [{n: 'Devices', el: () => $$('msg').offsetHeight ? $$('msg') : $$('title').parentElement, go: toggleDevices, cue: 'open'}],
+      [{n: 'Shuffle', el: () => $$('shuf'), go: () => $$('shuf').click(), cue: 'select'},
+       {n: 'Repeat', el: () => $$('rep'), go: () => $$('rep').click(), cue: 'select'}]
+    ];
+    if (shown($$('aout'))) {
+      out[1].push({n: 'Audio output', el: () => $$('aname'), go: () => $$('aname').click(), cue: 'open'});
+    }
+    return out;
+  };
+  function cPick(l, i) {
+    const ls = layers();
+    sl = Math.max(0, Math.min(ls.length - 1, l));
+    ci = Math.max(0, Math.min(ls[sl].length - 1, i));
+    flash(ls[sl][ci].el());
+    say(ls[sl][ci].n + '  \u00B7  ' + (sl + 1) + '/' + ls.length);
+  }
+  function cStep(dir) {  // along the layer
+    if (ci < 0) { snd('tick'); cPick(sl, 0); return; }
+    const n = layers()[sl].length, j = Math.max(0, Math.min(n - 1, ci + dir));
+    snd(j === ci ? 'bump' : 'tick');
+    cPick(sl, j);
+  }
+  function lyStep(dir) {  // between layers, keeping the column when the next layer has it
+    if (ci < 0) { snd('tick'); cPick(sl, 0); return; }
+    const n = layers().length, l = Math.max(0, Math.min(n - 1, sl + dir));
+    snd(l === sl ? 'bump' : 'tick');
+    cPick(l, ci);
+  }
+  function cTap() {
+    const L = layers()[sl];
+    if (ci < 0 || ci >= L.length) { say('Swipe to pick a control'); return; }
+    const c = L[ci];
+    if (c.cue) snd(c.cue);
+    c.go();
+    say(c.n);
+  }
+  // two-finger vertical swipe on the tile: fingers down = next layer
+  let vsy = 0, vst = 0, vsk = 0;
+  function vswipe(e, fn) {
+    e.preventDefault(); e.stopPropagation();
+    const now = performance.now();
+    if (now - vst > 150) vsy = 0;
+    vst = now; vsy += e.deltaY;
+    if (now < vsk || Math.abs(vsy) < 80) return;
+    fn(vsy > 0 ? -1 : 1);
+    vsk = now + 450; vsy = 0;
+  }
+
+  // ---- calendar (month view): a one-finger swipe moves the selected day
+  function calMove(days) {
+    const today = new Date();
+    const d = parseYmd(cal.sel);
+    if (d.getMonth() !== cal.m || d.getFullYear() !== cal.y) {  // selection is off-screen: start from the visible month
+      const here = today.getMonth() === cal.m && today.getFullYear() === cal.y;
+      cal.sel = ymd(here ? today : new Date(cal.y, cal.m, 1));
+      renderCal(); renderDay();
+      return;
+    }
+    const n = new Date(d.getFullYear(), d.getMonth(), d.getDate() + days);
+    const other = n.getMonth() !== cal.m || n.getFullYear() !== cal.y;
+    cal.sel = ymd(n);
+    if (other) { cal.y = n.getFullYear(); cal.m = n.getMonth(); renderCal(); renderDay(); loadCal(); }
+    else { renderCal(); renderDay(); }
+  }
+  function calSwipe(dir) {
+    const t = tiles[fi];
+    if (!t.contains($$('cmn')) || $$('calm').style.display === 'none') return;
+    calMove({right: 1, left: -1, down: 7, up: -7}[dir]);
+    snd('tick');
+    const el = document.querySelector('#cgrid button.s');
+    if (el) flash(el);
+  }
+
+  // ---- settings rows
+  const rows = () => [...sheet.querySelectorAll('.srow')].filter(r => r.offsetParent !== null && !r.querySelector('#sshv'));
+  const rowKind = r => r.dataset.kind || (r.querySelector('#netv') ? 'wifi' : r.querySelector('#tl') ? 'theme'
+    : r.querySelector('#c0,#c1,#c2,#wsel') ? 'picker'
+    : r.querySelector('#bbar') ? 'bright'
+    : r.querySelector('#rfs') ? 'data'
+    : r.querySelector('#pwr') ? 'power'
+    : r.querySelector('#nightT,#autoDimT,#ribbonT,#ambientT,#briefT,#meetT,#wakeResumeT') ? 'toggle'
+    : r.querySelector('#nightPct,#idleSel,#focusLenSel,#sleepSel,#wakeSel,#guestSel,#focusNow,#cancelTimers,#healthBtn,#restartKiosk') ? 'action' : '');
+  function rowStep(dir) {
+    const rs = rows();
+    if (!rs.length) return;
+    const was = ri;
+    ri = Math.max(0, Math.min(rs.length - 1, ri + dir));
+    snd(ri === was ? 'bump' : 'tick');
+    flash(rs[ri]);
+  }
+  function openSettings() {
+    openSheet();
+    ri = 0;
+    setTimeout(() => { const r = rows()[0]; if (r) flash(r); }, 380);
+  }
+  function theme(step, wrap) {
+    const order = ['light', 'auto', 'dark'], ids = {light: 'tl', auto: 'ta', dark: 'td'};
+    let i = order.indexOf(typeof S !== 'undefined' ? S.theme : 'auto');
+    if (i < 0) i = 1;
+    const j = wrap ? (i + step + 3) % 3 : Math.max(0, Math.min(2, i + step));
+    snd(j === i ? 'bump' : 'select');
+    $$(ids[order[j]]).click();
+    say('Theme: ' + order[j]);
+  }
+  function bright(dir) {
+    const cur = parseInt($$('bval').textContent, 10) || 50;
+    const v = Math.max(5, Math.min(100, cur + dir * 10));
+    snd(v === cur ? 'bump' : 'tick');
+    const r = $$('btrack').getBoundingClientRect();
+    const x = r.left + (v - 5) / 95 * r.width, y = r.top + r.height / 2;
+    pe($$('bbar'), 'pointerdown', x, y);
+    pe($$('bbar'), 'pointerup', x, y);
+    say('Brightness ' + v + '%');
+  }
+  let pwrUntil = 0;
+
+  // ---- picker and device/audio menus: scroll steps, tap picks
+  const itemName = el => ((el.querySelector('.main') || el).childNodes[0] || {}).textContent || '';
+  const listItems = m => m === 'picker'
+    ? [...$$('plist').children].filter(c => c.getClientRects().length)
+    : [...(menuEl() || {children: []}).children];
+  function lStep(dir) {
+    const m = mode(), it = listItems(m);
+    if (!it.length) return;
+    const was = m === 'picker' ? pi : mi;
+    let i = was < 0 ? 0 : Math.max(0, Math.min(it.length - 1, was + dir));
+    if (m === 'picker') pi = i; else mi = i;
+    snd(i === was ? 'bump' : 'tick');
+    it[i].scrollIntoView({block: 'nearest'});
+    flash(it[i]);
+  }
+  function activate(el) {
+    snd('select');
+    muteClose = performance.now() + 200;  // the list closing is part of this click
+    if (el.classList.contains('prow')) {  // playlist row: the play button starts it
+      const name = itemName(el);
+      el.querySelector('.pplay').click();
+      say('Play: ' + name);
+    } else {
+      say(itemName(el));
+      el.click();
+    }
+  }
+  function closeTop() {
+    const m = mode();
+    if (m === 'keys') closeKb();
+    else if (m === 'feature') featureClose();
+    else if (m === 'picker') closePicker();
+    else if (m === 'menu') {
+      snd('close');
+      if (menuEl().id === 'devmenu') toggleDevices(); else $$('aname').click();
+    } else if (m === 'sheet') closeSheet();
+  }
+  function back() {  // one step out: songs -> playlists, anything else closes
+    if (mode() === 'picker' && trackView) { $$('pls').click(); say('Playlists'); }
+    else closeTop();
+  }
+  // one-finger side swipe in a list: right = open the playlist, left = back / close
+  function pSlide(dir) {
+    const it = listItems('picker')[pi];
+    if (dir === 'right') {
+      if (it && it.classList.contains('prow')) {
+        say('Opening ' + itemName(it));
+        it.querySelector('.main').click();
+      }
+    } else back();
+  }
+
+  // ---- Wi-Fi: network list plus a TV-style German QWERTZ keyboard.
+  // Swipe to move the highlight, tap to select the highlighted key.
+  const kbStyle = document.createElement('style');
+  kbStyle.textContent =
+    '#tp-kb{position:fixed;inset:0;z-index:55;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;gap:1.6vh;padding:3vh 5vw}' +
+    '#tp-kb.on{display:flex}' +
+    '#tp-kb .kt{font-size:2.3vh;color:var(--dim);letter-spacing:.1em}' +
+    '#tp-kb .kf{font-size:5vh;letter-spacing:.2em;min-height:7vh;width:100%;text-align:center;border-bottom:1px solid var(--line);color:var(--fg);white-space:nowrap;overflow:hidden}' +
+    '#tp-kb .kg{display:flex;flex-direction:column;gap:.8vh;width:100%;height:48vh}' +
+    '#tp-kb .kr{display:flex;gap:.8vh;flex:1}' +
+    '#tp-kb .k{display:flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:1.6vh;font-size:2.8vh;color:var(--fg);min-width:0;transition:background .08s,color .08s,transform .08s,border-color .08s}' +
+    '#tp-kb .k.hi{background:var(--acc);border-color:var(--acc);color:var(--bg);transform:scale(1.045);font-weight:600;box-shadow:0 0 0 .22vh var(--acc)}' +
+    '#tp-kb .kh{font-size:1.8vh;color:var(--dim);text-align:center;max-width:90vw}';
+  document.head.appendChild(kbStyle);
+  const kb = document.createElement('div');
+  kb.id = 'tp-kb';
+  kb.innerHTML = '<div class="kt"></div><div class="kf"></div><div class="kg"></div><div class="kh"></div>';
+  document.body.appendChild(kb);
+  const kbq = c => kb.querySelector('.' + c);
+
+  const KW = (str, w) => [...str].map(c => [c, w || 1]);
+  const SH = '\u21E7', BS = '\u232B';
+  const bottom = l => [[l, 2], ['.', 1], ['space', 4], ['Join', 3]];
+  const LAYERS = {
+    lower: [KW('1234567890'), KW('qwert' + 'zuiop'), KW('asdfghjkl', 10 / 9),
+            [[SH, 1.5], ...KW('yxcvbnm\u00E4\u00F6\u00FC\u00DF'), [BS, 1.5]], bottom('?123')],
+    upper: [KW('1234567890'), KW('QWERTZ' + 'UIOP'), KW('ASDFGHJKL', 10 / 9),
+            [[SH, 1.5], ...KW('YXCVBNM\u00C4\u00D6\u00DC\u1E9E'), [BS, 1.5]], bottom('?123')],
+    sym1:  [KW('1234567890'), KW('@#$%&*-+()'), KW('!"\':;/\\?,', 10 / 9),
+            [[SH, 1.5], ...KW('_=<>[]|'), [BS, 1.5]], bottom('abc')],
+    sym2:  [KW('1234567890'), KW('~^{}[]<>|\\'), KW('`\u00B4\u20AC\u00A3\u00A5\u00B0\u00A7\u00B5\u00B2', 10 / 9),
+            [[SH, 1.5], ...KW('-_=+*/#'), [BS, 1.5]], bottom('abc')]
+  };
+  let kbNet = null, kbPw = '', kbLayer = 'lower', kbBusy = false, kbRecent = 0, kbT = 0;
+  let kbHi = {r: 1, c: 0};
+
+  function kbClamp() {
+    const rows = LAYERS[kbLayer];
+    kbHi.r = Math.max(0, Math.min(rows.length - 1, kbHi.r));
+    kbHi.c = Math.max(0, Math.min(rows[kbHi.r].length - 1, kbHi.c));
+  }
+  function kbRender() {
+    const g = kbq('kg');
+    g.innerHTML = '';
+    kbClamp();
+    LAYERS[kbLayer].forEach((row, rr) => {
+      const r = document.createElement('div');
+      r.className = 'kr';
+      row.forEach(([label, w], cc) => {
+        const k = document.createElement('div');
+        k.className = 'k' + (rr === kbHi.r && cc === kbHi.c ? ' hi' : '');
+        k.textContent = label === 'space' ? '\u2423' : label;
+        k.style.flex = w + ' 1 0';
+        r.appendChild(k);
+      });
+      g.appendChild(r);
+    });
+  }
+  function kbSelected() {
+    const rows = LAYERS[kbLayer];
+    kbClamp();
+    return rows[kbHi.r][kbHi.c];
+  }
+  function kbFlash() {
+    const e = kbq('kg').children[kbHi.r] && kbq('kg').children[kbHi.r].children[kbHi.c];
+    if (e) flash(e);
+  }
+  function kbField() {
+    const n = kbPw.length;
+    let t = '\u2022'.repeat(n);
+    if (n && performance.now() < kbRecent) t = '\u2022'.repeat(n - 1) + kbPw[n - 1];
+    kbq('kf').textContent = t || '\u00A0';
+  }
+  const kbMsg = txt => { kbq('kh').textContent = txt; };
+  function openKb(n, hint) {
+    kbNet = n; kbPw = ''; kbLayer = 'lower'; kbBusy = false; kbHi = {r: 1, c: 0};
+    kbq('kt').textContent = 'Join ' + n.ssid + ' \u00B7 German QWERTZ';
+    kbRender(); kbField();
+    kbMsg(hint || 'Swipe to highlight a key \u00B7 tap to select \u00B7 use \u21E7 for caps and \u232B to delete');
+    kb.classList.add('on');
+    kbOpen = true;
+    snd('open');
+  }
+  function closeKb() {
+    kbOpen = false; kbPw = '';
+    kb.classList.remove('on');
+    snd('close');
+  }
+  function kbDel() {
+    if (kbPw) { kbPw = kbPw.slice(0, -1); kbField(); snd('tick'); } else snd('bump');
+  }
+  function kbMove(dir) {
+    const rows = LAYERS[kbLayer];
+    if (dir === 'left') kbHi.c = (kbHi.c - 1 + rows[kbHi.r].length) % rows[kbHi.r].length;
+    else if (dir === 'right') kbHi.c = (kbHi.c + 1) % rows[kbHi.r].length;
+    else if (dir === 'up') { kbHi.r = (kbHi.r - 1 + rows.length) % rows.length; kbHi.c = Math.min(kbHi.c, rows[kbHi.r].length - 1); }
+    else if (dir === 'down') { kbHi.r = (kbHi.r + 1) % rows.length; kbHi.c = Math.min(kbHi.c, rows[kbHi.r].length - 1); }
+    kbRender(); kbFlash(); snd('tick');
+  }
+  function keySlide(dir) { kbMove(dir); }
+  function kbJoin() {
+    if (kbPw.length < 8) { kbMsg('A Wi-Fi password needs at least 8 characters'); snd('bump'); return; }
+    wifiJoin(kbNet, kbPw);
+  }
+  function keyPress(t) {
+    if (t === SH) {
+      kbLayer = ({lower: 'upper', upper: 'lower', sym1: 'sym2', sym2: 'sym1'})[kbLayer];
+      kbHi = {r: 1, c: 0}; kbRender(); snd('tick'); return;
+    }
+    if (t === BS) { kbDel(); return; }
+    if (t === '?123') { kbLayer = 'sym1'; kbHi = {r: 1, c: 0}; kbRender(); snd('tick'); return; }
+    if (t === 'abc') { kbLayer = 'lower'; kbHi = {r: 1, c: 0}; kbRender(); snd('tick'); return; }
+    if (t === 'Join') { kbJoin(); return; }
+    if (kbPw.length >= 63) { snd('bump'); return; }
+    kbPw += t === 'space' ? ' ' : t;
+    kbRecent = performance.now() + 900;
+    clearTimeout(kbT);
+    kbT = setTimeout(kbField, 950);
+    kbField(); snd('tick');
+    if (kbLayer === 'upper') { kbLayer = 'lower'; kbRender(); }
+  }
+  // Tap activates the currently highlighted key; swipes move the highlight.
+  function keyTap(d) {
+    if (kbBusy) return;
+    const row = LAYERS[kbLayer][kbHi.r], key = row[kbHi.c];
+    kbFlash();
+    keyPress(key[0]);
+  }
+
+  // Small local hook used by the kiosk test harness; no network exposure.
+  window.__vesperKb = {
+    open: openKb, close: closeKb, move: kbMove, tap: keyTap,
+    value: () => kbPw, layer: () => kbLayer, hi: () => ({...kbHi}), pressed: () => kbSelected()[0]
+  };
+
+  const WIFI_ERR = {
+    'need-password': 'This network needs a password',
+    'no-access': 'No permission to control Wi-Fi (step 1 not done?)',
+    'no-connection': 'Could not connect - check the password',
+    'add-failed': 'Could not add the network',
+    'bad-password': 'Passwords are 8 to 63 characters',
+    'busy': 'Already connecting...'
+  };
+  async function wifiJoin(n, psk) {
+    kbBusy = true;
+    const note = txt => { if (kbOpen) kbMsg(txt); else say(txt, 30000); };
+    note('Connecting to ' + n.ssid + '...');
+    let r = null;
+    try {
+      r = await (await fetch('/api/wifi-join', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ssid: n.ssid, psk: psk})
+      })).json();
+    } catch (e) {}
+    let res = r && r.ok ? null : {state: 'fail', msg: (r && r.error) || 'error'};
+    for (let i = 0; !res && i < 40; i++) {
+      await new Promise(f => setTimeout(f, 1000));
+      try {
+        const j = await (await fetch('/api/wifi-job')).json();
+        if (j.state === 'ok' || j.state === 'fail') res = j;
+      } catch (e) {}
+    }
+    kbBusy = false;
+    if (res && res.state === 'ok') {
+      if (kbOpen) closeKb();
+      say('Connected to ' + n.ssid, 2500);
+      snd('open');
+      if (typeof pollNet === 'function') { pollNet(); setTimeout(pollNet, 4000); }
+    } else {
+      const msg = WIFI_ERR[res && res.msg] || 'Could not connect';
+      snd('bump');
+      if (kbOpen) kbMsg(msg);
+      else if (n.saved && (!res || res.msg === 'no-connection')) openKb(n, 'The saved password did not work - enter it again');
+      else say(msg, 3500);
+    }
+  }
+  function wifiPick(n) {
+    if (n.current) { say('Already connected to ' + n.ssid); return; }
+    if (n.secure && !n.saved) openKb(n);
+    else wifiJoin(n, null);
+  }
+  function wifiList(d) {
+    const items = (d.networks || []).map(n => ({
+      label: (n.current ? '\u2713  ' : '') + n.ssid,
+      sub: [n.secure ? 'secured' : 'open', n.band, n.signal != null ? n.signal + ' dBm' : '',
+            n.saved && !n.current ? 'saved' : ''].filter(Boolean).join(' \u00B7 '),
+      cur: !!n.current,
+      cb: () => wifiPick(n)
+    }));
+    if (!items.length) items.push({label: 'Scanning...', sub: 'Results appear in a few seconds', cur: false, cb: () => {}});
+    showList('Wi-Fi networks', items);
+  }
+  async function openWifi() {
+    let d;
+    try { d = await (await fetch('/api/wifi-scan')).json(); } catch (e) { say('Could not scan', 2500); return; }
+    if (d.error === 'no-access') { say(WIFI_ERR['no-access'], 4000); snd('bump'); return; }
+    if (d.error) { say('No Wi-Fi adapter found', 3000); snd('bump'); return; }
+    wifiList(d);
+    // scan results arrive a few seconds after the scan starts: refresh once if nothing was touched
+    setTimeout(async () => {
+      if (pi >= 0 || !shown(picker) || $$('ptitle').textContent !== 'Wi-Fi networks') return;
+      try { wifiList(await (await fetch('/api/wifi-scan')).json()); } catch (e) {}
+    }, 3500);
+  }
+
+  function tap(d) {
+    const m = mode();
+    if (m === 'feature') { featureTap(); return; }
+    if (m === 'keys') { keyTap(d); return; }
+    if (m === 'picker' || m === 'menu') {
+      const it = listItems(m)[m === 'picker' ? pi : mi];
+      if (it) activate(it); else lStep(1);
+      return;
+    }
+    if (m === 'tiles') {
+      if (tiles[fi].id === 'timeTile') { $$('advice').click(); return; }
+      if (isSpotify()) cTap();
+      return;
+    }
+    const r = rows()[ri];
+    if (!r) return;
+    const k = rowKind(r);
+    if (k === 'category') {
+      snd('select'); r.querySelector('button').click(); ri = 0;
+      setTimeout(() => { const n = rows()[0]; if (n) flash(n); }, 120);
+      say('Opening ' + r.querySelector('span').textContent);
+    } else if (k === 'back') {
+      snd('close'); r.querySelector('button').click(); ri = 0;
+      setTimeout(() => { const n = rows()[0]; if (n) flash(n); }, 120);
+    } else if (k === 'toggle' || k === 'action') {
+      snd('select'); r.querySelector('button').click(); say(r.querySelector('span').textContent);
+    } else if (k === 'theme') theme(1, true);
+    else if (k === 'picker') r.querySelector('button.sel').click();
+    else if (k === 'wifi') openWifi();
+    else if (k === 'data') { snd('select'); $$('rfs').click(); say('Refreshing'); }
+    else if (k === 'bright') say('Swipe sideways to adjust');
+    else if (k === 'ambience') say('Swipe sideways to adjust ambience');
+    else if (k === 'power') {
+      if (performance.now() < pwrUntil) { pwrUntil = 0; snd('select'); $$('pwr').click(); }
+      else { pwrUntil = performance.now() + 3000; snd('arm'); say('Tap again to shut down', 3000); }
+    }
+  }
+  function slide(dir) {
+    const m = mode();
+    if (m === 'feature') { featureSlide(dir); return; }
+    if (dir === 'up' || dir === 'down') { if (m === 'tiles') calSwipe(dir); return; }
+    if (m === 'keys') { keySlide(dir); return; }
+    if (m === 'picker') { pSlide(dir); return; }
+    if (m === 'menu') { if (dir === 'left') closeTop(); return; }
+    if (m === 'tiles') { calSwipe(dir); return; }
+    if (m !== 'sheet') return;
+    const r = rows()[ri];
+    if (!r) return;
+    const k = rowKind(r), d = dir === 'right' ? 1 : -1;
+    if (k === 'theme') theme(d, false);
+    else if (k === 'bright') bright(d);
+    else if (k === 'ambience') { setAmbience(S.ambientLevel + d * 10); say('Ambience ' + S.ambientLevel + '%'); }
+    else if (['picker', 'data', 'wifi', 'toggle', 'action', 'category', 'back'].includes(k)) tap();
+  }
+
+  // ---- two-finger scroll
+  let sacc = 0, slast = 0;
+  // list steps: fingers moving up go to the previous item (reversed from before)
+  function stepper(e, g, fn, px) {
+    const now = performance.now();
+    if (now - slast > 150) sacc = 0;
+    slast = now; sacc += e.deltaY * g;
+    while (Math.abs(sacc) >= px) { fn(sacc > 0 ? -1 : 1); sacc -= sacc > 0 ? px : -px; }
+  }
+  let fx = 0, flast = 0, flock = 0;
+  // fn gets +1 when the fingers moved left, -1 when they moved right
+  function hswipe(e, fn) {
+    e.preventDefault(); e.stopPropagation();
+    const now = performance.now();
+    if (now - flast > 150) fx = 0;
+    flast = now; fx += e.deltaX;
+    if (now < flock || Math.abs(fx) < 80) return;
+    fn(fx > 0 ? 1 : -1);
+    flock = now + 450; fx = 0;
+  }
+  document.addEventListener('wheel', e => {
+    if (idleOpen()) { if (window.noteActivity) window.noteActivity(); e.preventDefault(); e.stopPropagation(); return; }
+    if (window.noteActivity) window.noteActivity();
+    const g = gain(e);
+    const m = mode();
+    if (m === 'feature') { e.preventDefault(); e.stopPropagation(); featureSlide(e.deltaY > 0 ? 'down' : 'up'); return; }
+    if (m !== 'tiles') {
+      e.preventDefault(); e.stopPropagation();
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        if (m === 'sheet') stepper(e, g, rowStep, PX.sheet); else stepper(e, g, lStep, PX.list);
+      }
+      return;
+    }
+    const horiz = Math.abs(e.deltaX) > Math.abs(e.deltaY);
+    const t = tiles[fi];
+    if (horiz) {
+      if (t.contains($$('stage'))) {
+        hswipe(e, d => { center = (center + (d > 0 ? 1 : 2)) % 3; layout(); snd('tick'); });
+        return;
+      }
+      // fingers moving right = next item to the right
+      if (t.contains($$('cmn')) || t.contains($$('bn'))) { hswipe(e, d => stepPill(t, -d)); return; }
+      if (isSpotify()) { hswipe(e, d => cStep(-d)); return; }
+    }
+    if (!horiz && isSpotify()) { vswipe(e, d => lyStep(d)); return; }
+    for (const n of t.querySelectorAll('#clist,#ag,#fc,.hours')) {
+      if (!n.offsetParent) continue;
+      const k = n.classList.contains('hours') ? K.hours : n.id === 'fc' ? K.fc : K.cal;
+      if (!horiz && n.scrollHeight > n.clientHeight) nudge(n, 'scrollTop', e.deltaY * g * k);
+      else if (n.scrollWidth > n.clientWidth) nudge(n, 'scrollLeft', (horiz ? e.deltaX : e.deltaY) * g * k);
+      else continue;
+      e.preventDefault(); e.stopPropagation();
+      return;
+    }
+  }, {capture: true, passive: false});
+
+  // ---- stray-click shield: real clicks land under the hidden cursor, so drop them
+  let shield = false, shieldUntil = 0;
+  const blocked = () => shield || performance.now() < shieldUntil || mode() !== 'tiles' || isSpotify();
+  const release = () => { shield = false; shieldUntil = performance.now() + 700; };
+  ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'click', 'dblclick', 'auxclick', 'contextmenu'].forEach(n =>
+    document.addEventListener(n, e => {
+      // a two-finger tap also sends a right click: never let that through
+      if (e.isTrusted && (e.button === 2 || blocked())) { e.stopPropagation(); e.preventDefault(); }
+    }, true));
+
+  // ---- corners: top-right = next song, top-left = previous song (back/close inside menus)
+  const skip = c => {
+    snd(c === 'tr' ? 'next' : 'prev');
+    $$(c === 'tr' ? 'next' : 'prev').click();
+    say(c === 'tr' ? 'Next track' : 'Previous track');
+  };
+  function corner(d) {
+    if (d.p === 'down') { shield = true; return; }
+    const act = () => {
+      const m = mode();
+      if (m === 'keys') return;
+      if (m === 'feature') {
+        const fm = featureOpen();
+        if (fm === 'lyrics') { skip(d.c); return; }
+        if (fm === 'guest') return;
+        if (d.c === 'tl') featureClose(); else featureTap();
+        return;
+      }
+      if (m === 'tiles') skip(d.c); else if (d.c === 'tl') back(); else tap();
+    };
+    if (d.p === 'press') act();
+    else { release(); if (d.tap) act(); }
+  }
+
+  // ---- pad edges: top = seek, right = Spotify volume, left = device volume (silent: the pill shows the value)
+  const mmss = s => { const t = Math.round(s); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
+  const total = () => { const [m, s] = $$('ttot').textContent.split(':').map(Number); return m * 60 + s; };
+  const Z = {
+    top:   {gain: 1,   hit: 'pbar', track: 'ptrack', vert: false, read: () => clamp(+($$('pfill').dataset.frac) || 0),
+            say: v => 'Seek ' + mmss(v * total()) + ' / ' + $$('ttot').textContent},
+    right: {gain: 1.3, hit: 'vbar', track: 'vtrack', vert: true,  read: () => frac($$('vfill').style.height),
+            say: v => 'Spotify volume ' + Math.round(v * 100)},
+    left:  {gain: 1.3, read: () => clamp(+$$('avol').value / 100),
+            say: v => 'Device volume ' + Math.round(v * 100)}
+  };
+  let eg = null, lastIn = 0;
+  function put(z, v, type) {
+    const s = Z[z];
+    if (z === 'left') {
+      if (type === 'pointerdown') return;
+      const av = $$('avol'), now = performance.now();
+      av.value = Math.round(v * 100);
+      if (type === 'pointerup' || now - lastIn > 100) { lastIn = now; av.dispatchEvent(new Event('input', {bubbles: true})); }
+      if (type === 'pointerup') av.dispatchEvent(new Event('change', {bubbles: true}));
+      return;
+    }
+    const r = $$(s.track).getBoundingClientRect();
+    pe($$(s.hit), type,
+       s.vert ? r.left + r.width / 2 : r.left + v * r.width,
+       s.vert ? r.top + (1 - v) * r.height : r.top + r.height / 2);
+  }
+  function edge(d) {
+    const fm = featureOpen();
+    if (d.p === 'start') {
+      shield = true;
+      const allowed = mode() === 'tiles' || (fm === 'lyrics' && (d.z === 'top' || d.z === 'right'));
+      if (!allowed || (d.z === 'left' && fm === 'lyrics')) { eg = null; return; }
+      eg = {z: d.z, v: Z[d.z].read()};
+      if (d.z === 'top' && fm === 'lyrics') $('lyricsScreen').classList.add('seeking');
+      if (d.z === 'right') {
+        if (fm === 'lyrics') showLyricsVolume(eg.v); else showVolumeControls();
+      }
+      put(d.z, eg.v, 'pointerdown');
+    } else if (d.p === 'end') {
+      release();
+      if (eg && eg.z === d.z) {
+        put(d.z, eg.v, 'pointerup');
+        if (d.z === 'top') $('lyricsScreen').classList.remove('seeking');
+        if (d.z === 'right') {
+          if (fm === 'lyrics') showLyricsVolume(eg.v); else showVolumeControls();
+        }
+        eg = null;
+      }
+    } else if (eg && eg.z === d.z) {
+      eg.v = clamp(eg.v + d.d * Z[d.z].gain);
+      put(d.z, eg.v, 'pointermove');
+      if (d.z === 'right') {
+        if (fm === 'lyrics') showLyricsVolume(eg.v); else showVolumeControls();
+      }
+      say(Z[d.z].say(eg.v));
+    }
+  }
+
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeTop(); });
+
+  // ---- faster Spotify lists: answer from a cache, refresh behind it
+  const _fetch = window.fetch.bind(window);
+  const TTL = {'/api/playlists': 600000, '/api/playlist-items': 300000, '/api/queue': 30000};
+  const cache = new Map();  // url -> {t, text}
+  let queueOk = 0;          // a queue fetched before this moment is stale (track or mode changed)
+  const jsonRes = text => new Response(text, {status: 200, headers: {'Content-Type': 'application/json'}});
+  function refresh(u) {
+    return _fetch(u).then(r => r.ok ? r.text() : null).then(text => {
+      try { if (text && !JSON.parse(text).error) cache.set(u, {t: Date.now(), text}); } catch (_) {}
+      return text;
+    }).catch(() => null);
+  }
+  window.fetch = (input, init) => {
+    const u = typeof input === 'string' ? input : input.url;
+    const path = u.split('?')[0];
+    if (init && init.method && init.method !== 'GET') {
+      // starting a playlist changes the "recent first" order: refresh it shortly after
+      if (path === '/api/playlist' || path === '/api/playfrom') setTimeout(() => refresh('/api/playlists'), 4000);
+      return _fetch(input, init);
+    }
+    const ttl = TTL[path];
+    if (!ttl) return _fetch(input, init);
+    const hit = cache.get(u), age = hit ? Date.now() - hit.t : Infinity;
+    if (path === '/api/queue') {
+      if (hit && hit.t > queueOk && age < ttl) return Promise.resolve(jsonRes(hit.text));
+    } else if (hit) {
+      if (age > 5000) refresh(u);  // show what we have now, update behind it
+      return Promise.resolve(jsonRes(hit.text));
+    }
+    say('Loading...', 3000);
+    return refresh(u).then(text => { hud.classList.remove('on'); return text ? jsonRes(text) : _fetch(input, init); });
+  };
+  const dirtyQueue = () => { queueOk = Date.now(); setTimeout(() => refresh('/api/queue'), 800); };
+  let lastTitle = $$('title').textContent;
+  new MutationObserver(() => {
+    const t = $$('title').textContent;
+    if (t !== lastTitle) { lastTitle = t; dirtyQueue(); }
+  }).observe($$('title'), {childList: true, characterData: true, subtree: true});
+  ['shuf', 'rep'].forEach(id => $$(id).addEventListener('click', () => setTimeout(dirtyQueue, 600)));
+  setTimeout(() => { refresh('/api/playlists'); refresh('/api/queue'); }, 5000);
+  setInterval(() => refresh('/api/playlists'), 300000);
+
+  const es = new EventSource('http://127.0.0.1:8099/events');
+  es.onmessage = m => {
+    const d = JSON.parse(m.data);
+    if (idleOpen()) { if (window.noteActivity) window.noteActivity(); return; }
+    if (window.noteActivity) window.noteActivity();
+    const feat = featureOpen();
+    if (d.t === 'swipe') { if (feat) featureSlide(d.dir); else if (mode() === 'tiles') moveFocus(d.dir); }
+    else if (d.t === 'swipe4') {
+      if (feat) { if (d.dir === 'up') featureClose(); }
+      else if (d.dir === 'down' && mode() === 'tiles') openSettings();
+      else if (d.dir === 'up') closeTop();
+    }
+    else if (d.t === 'edge') edge(d);
+    else if (d.t === 'corner') corner(d);
+    else if (d.t === 'tap') {
+      if (feat) { if (d.k !== 'tl' && d.k !== 'tr') featureTap(); }
+      else if (mode() === 'keys') tap(d);
+      else if (!d.k || d.k === 'free') tap();
+    }
+    else if (d.t === 'tap2') {
+      if (feat) {
+        if (feat === 'lyrics') { snd('toggle'); $$('pp').click(); say('Play / pause'); }
+        return;
+      }
+      snd('toggle'); $$('pp').click(); say('Play / pause');
+    }
+    else if (d.t === 'slide') slide(d.dir);
+  };
+  // Local test hook for browser-side interaction checks.
+  window.__vesperGesture = { edge, corner, tap, slide, mode, featureOpen };
+})();
+
+// Refresh immediately when the kiosk becomes visible again.
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) return;
+  poll();
+  aLoad();
+  pollNet();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+# Private runtime configuration and credentials
+dashboard/config.json
+config/calendar.urls
+config/soloist.env
+soloist.env
+spotify.json
+.env
+*.secret
+*.token
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Local backups, logs and captures
+*.bak
+*.bak.*
+*.tar
+*.tar.gz
+*.zip
+*.log
+screenshots/
+backups/
+
+# Platform junk
+.DS_Store
+Thumbs.db

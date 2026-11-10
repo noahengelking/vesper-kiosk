@@ -1,0 +1,6 @@
+[Unit]
+Description=Refresh the Spotify Soloist build
+
+[Service]
+Type=oneshot
+ExecStart=%h/dashboard/soloist_update.sh

@@ -1,0 +1,18 @@
+[Unit]
+Description=Vesper Chromium kiosk
+After=graphical-session.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Environment=XDG_RUNTIME_DIR=%t
+Environment=WAYLAND_DISPLAY=wayland-1
+ExecStartPre=/bin/sh -c 'i=0; while [ "$i" -lt 240 ]; do [ -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ] && exit 0; i=$((i+1)); sleep 0.25; done; exit 1'
+ExecStart=/usr/bin/chromium --autoplay-policy=no-user-gesture-required --kiosk --app=http://127.0.0.1:8080/ --ozone-platform=wayland --no-first-run --no-default-browser-check --noerrdialogs --disable-infobars --disable-session-crashed-bubble --disable-pinch --overscroll-history-navigation=0 --password-store=basic --enable-gpu-rasterization --enable-zero-copy --disable-background-networking --disable-component-update --disable-default-apps --disable-sync --no-service-autorun --disable-breakpad --disable-domain-reliability --disable-client-side-phishing-detection --no-pings --disable-component-extensions-with-background-pages --disable-features=Translate,MediaRouter,OptimizationHints,AutofillServerCommunication,CertificateTransparencyComponentUpdater,InterestFeedContentSuggestions --disk-cache-size=134217728 --media-cache-size=16777216 --force-device-scale-factor=1
+Restart=always
+RestartSec=2
+KillMode=mixed
+TimeoutStopSec=8
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,883 @@
+================================================================================
+VESPER KIOSK - SYSTEM LAYOUT AND COMPONENT REFERENCE
+================================================================================
+Host name:        <kiosk-hostname>
+Primary user:     <kiosk-user>
+Updated:          2026-11-10
+Purpose:          Wall/desk kiosk dashboard for clock, Spotify, calendar,
+                  weather, room audio, network controls and ambient modes.
+
+This document describes how the installed system is organized, which files and
+services participate, and how data and input events flow between components.
+
+
+================================================================================
+1. HARDWARE AND OPERATING SYSTEM
+================================================================================
+CPU:              Intel Pentium Silver N5030, 4 cores
+Graphics:         Intel UHD Graphics 605 (i915)
+RAM:              8 GB class
+Storage:          eMMC, Debian root filesystem
+Display:          1920 x 1080
+OS:               Debian GNU/Linux 13 (trixie)
+Kernel:           6.12.x
+Graphics stack:   Sway compositor on Wayland, Chromium with ozone/Wayland
+Input device:     touchpad read directly through Linux evdev by trackpad.py
+Audio:            PipeWire + WirePlumber, with local audio helper on port 8081
+
+
+================================================================================
+2. TOP-LEVEL RUNTIME LAYOUT
+================================================================================
+High-level process stack:
+
+  systemd system manager
+    |
+    +-- desk-dashboard.service       Python HTTP server on 127.0.0.1:8080
+    +-- ssh.service                  OpenSSH server
+    +-- wpa_supplicant.service       Wi-Fi management
+    +-- getty@tty1.service           autologin/display session entry
+    |
+  systemd user manager (user@1000.service)
+    |
+    +-- Sway compositor
+    |     +-- trackpad.py loop       reads evdev, serves SSE on 127.0.0.1:8099
+    |     +-- Chromium kiosk         started by vesper-kiosk.service
+    |     +-- swaybg                 background
+    |
+    +-- vesper-kiosk.service         manages Chromium, auto-restart
+    +-- desk-audio.service           audio helper on 127.0.0.1:8081
+    +-- auto-output.service          selects 3.5 mm output when plugged in
+    +-- soloist.service              Spotify Connect device named Vesper
+    +-- pipewire / pipewire-pulse    audio server
+    +-- wireplumber                  audio policy/session manager
+
+ASCII interaction diagram:
+
+      +----------------------+        HTTP/1.1         +-------------------+
+      | Chromium kiosk       | <--------------------> | dashboard server  |
+      | http://127.0.0.1:8080|                        | server.py :8080    |
+      +----------+-----------+                        +---------+---------+
+                 |                                              |
+                 | EventSource :8099                            +--> Spotify Web API
+                 v                                              +--> LRCLIB lyrics API
+      +----------------------+                                  +--> calendar ICS URLs
+      | trackpad.py          |                                  +--> local system APIs
+      | raw evdev -> gestures|                                  +--> health/metrics
+      +----------------------+                                  |
+                 ^                                              |
+                 | touchpad hardware                            v
+                 |                                   +----------------------+
+                 +-----------------------------------| systemd, /proc, /sys |
+                                                     +----------------------+
+
+      +----------------------+        HTTP :8081     +----------------------+
+      | Chromium kiosk       | <--------------------> | audio_server.py      |
+      | audio output controls|                        | PipeWire helper      |
+      +----------------------+                        +----------------------+
+
+
+================================================================================
+3. SERVICES AND THEIR RESPONSIBILITIES
+================================================================================
+SYSTEM SERVICES
+---------------
+desk-dashboard.service
+  Unit file: /etc/systemd/system/desk-dashboard.service
+  ExecStart: /usr/bin/python3 /home/<kiosk-user>/dashboard/server.py
+  Runs as:   user
+  Listens:   127.0.0.1:8080
+  Role:      Main dashboard HTTP API and static index.html server.
+             Talks to Spotify, calendar sources, LRCLIB, local system tools,
+             and the user-level kiosk service when a Chromium restart is asked.
+  Restart:   always, 2 seconds
+
+ssh.service
+  Role: remote administration. Bound to the machine's LAN address.
+
+wpa_supplicant.service
+  Role: current Wi-Fi connection and saved network management.
+  Current config: /etc/wpa_supplicant/vesper.conf
+
+user@1000.service
+  systemd user manager for UID 1000. Hosts the user-level services below.
+
+USER SERVICES
+-------------
+vesper-kiosk.service
+  Unit file: ~/.config/systemd/user/vesper-kiosk.service
+  Role: launches and supervises the Chromium kiosk.
+  Startup: waits for the Wayland socket, then starts Chromium with kiosk,
+           autoplay, Wayland, GPU rasterization and reduced-background flags.
+  Restart: always, 2 seconds
+  Enabled: yes, at default.target
+
+desk-audio.service
+  Unit file: ~/.config/systemd/user/desk-audio.service
+  ExecStart: /usr/bin/python3 /home/<kiosk-user>/dashboard/audio_server.py
+  Listens: 127.0.0.1:8081
+  Role: controls PipeWire/PulseAudio sinks and volumes for the dashboard.
+
+auto-output.service
+  Unit file: ~/.config/systemd/user/auto-output.service
+  ExecStart: /usr/bin/python3 /home/<kiosk-user>/dashboard/auto_output.py
+  Role: prefers the 3.5 mm output when a jack is connected.
+
+soloist.service
+  Unit file: ~/.config/systemd/user/soloist.service
+  Role: exposes Vesper as a Spotify Connect device named "Vesper".
+  Credentials are in ~/.config/desk-dashboard/soloist.env.
+
+Sway and trackpad
+-----------------
+Sway is the Wayland compositor. The Sway config is:
+  ~/.config/sway/config
+
+Sway starts:
+  - vesper-kiosk.service (via systemctl --user start)
+  - a supervised trackpad.py loop
+  - normal Sway/audio user services through systemd
+
+The trackpad.py loop is kept outside systemd because it is tied directly to
+the active graphical session.
+
+
+================================================================================
+4. NETWORK PORTS AND BOUNDARIES
+================================================================================
+127.0.0.1:8080   Main dashboard HTTP server (server.py)
+127.0.0.1:8081   Local audio control server (audio_server.py)
+127.0.0.1:8099   Trackpad gesture EventSource (trackpad.py)
+22/tcp           SSH, reachable from the LAN
+LAN              Chromium itself does not listen publicly; the UI is local.
+
+The dashboard and gesture APIs are intentionally bound to localhost. They are
+consumed by the Chromium kiosk and not exposed directly to the LAN.
+
+
+================================================================================
+5. FILE MAP
+================================================================================
+/home/<kiosk-user>/dashboard/index.html
+  Single-page frontend. Contains the dashboard UI, CSS, main JavaScript,
+  the bundled local QR encoder, and the trackpad gesture integration script.
+
+/home/<kiosk-user>/dashboard/server.py
+  Main Python backend. Serves index.html and APIs. Handles:
+    - Spotify OAuth token refresh and Web API calls
+    - single-flight request coalescing and short caching
+    - lyrics lookup through LRCLIB
+    - calendar refresh and event expansion
+    - Wi-Fi scan/join and Wi-Fi credential lookup for the guest QR
+    - brightness, power, SSH, battery and network status
+    - system health metrics and Chromium restart
+    - static HTML delivery
+
+/home/<kiosk-user>/dashboard/audio_server.py
+  Local audio helper for PipeWire/PulseAudio sink enumeration, choosing the
+  default output and setting volume.
+
+/home/<kiosk-user>/dashboard/auto_output.py
+  Automatically picks the 3.5 mm jack when connected.
+
+/home/<kiosk-user>/dashboard/trackpad.py
+  Reads the raw touchpad event device, recognizes taps, two-finger taps,
+  one-finger slides, three/four-finger swipes, edge drags and corner actions,
+  then streams JSON gesture events to Chromium through SSE on port 8099.
+
+/home/<kiosk-user>/dashboard/config.json
+  Spotify application client ID.
+
+/home/<kiosk-user>/.config/desk-dashboard/spotify.json
+  Spotify OAuth tokens. Written by the token refresh/login flow.
+
+/home/<kiosk-user>/.config/desk-dashboard/calendar.urls
+  One or more calendar ICS URLs used by the backend calendar refresh loop.
+
+/home/<kiosk-user>/.config/desk-dashboard/soloist.env
+  Soloist Spotify Connect API key/environment.
+
+/home/<kiosk-user>/.config/sway/config
+  Sway setup: keyboard layout de, maintenance keybinds, hides cursor,
+  starts the kiosk service and the trackpad loop.
+
+/home/<kiosk-user>/.config/systemd/user/*.service
+  User services: vesper-kiosk, desk-audio, auto-output, soloist,
+  soloist-update and related timers.
+
+/etc/wpa_supplicant/vesper.conf
+  Saved Wi-Fi networks. The guest QR reads the current SSID's PSK from this
+  world-readable local file; it never sends the password to a third party.
+
+/home/<kiosk-user>/.config/chromium/
+  Chromium profile, local storage, cache and session state.
+
+================================================================================
+6. FRONTEND LAYOUT
+================================================================================
+The visible main screen is a 2 x 2 grid.
+
+  +--------------------------------+--------------------------------+
+  | TIME                           | SPOTIFY                        |
+  | three analog clocks            | album art, title, artist       |
+  | current center clock           | playlists, lyrics, up next     |
+  | next event                     | progress, play controls        |
+  | contextual advice              | shuffle, repeat, volume        |
+  +--------------------------------+--------------------------------+
+  | CALENDAR                       | WEATHER                        |
+  | month grid / agenda            | current / daily / hourly       |
+  | event list                     | feels like, humidity, wind, AQI|
+  +--------------------------------+--------------------------------+
+
+Fixed/global UI:
+  - Battery indicator, hidden when no battery is present.
+  - Offline indicator.
+  - HUD text and selection ring used by the gesture layer.
+  - Toast messages.
+
+INTERACTION SURFACES AND OVERLAYS
+---------------------------------
+The main grid remains interactive. Full-screen overlays are layered above it:
+
+  z-index range   Surface
+  --------------------------
+  main grid       tiles and normal controls
+  15              battery and offline indicators
+  20              top edge gesture zone
+  30              settings sheet
+  40              picker list (cities, playlists, devices, settings choices)
+  48              idle screen
+  52              focus, lyrics, brief, health, guest mode screens
+  55              TV-style Wi-Fi keyboard
+  60              selection ring
+  70              gesture HUD
+  75              toast messages
+
+MAIN OVERLAYS
+-------------
+Focus screen:
+  Large countdown, tap anywhere to end focus. Focus remains visible in the
+  clock tile's badge while active.
+
+Lyrics screen:
+  Album art, track metadata, synced lyric lines.
+  Current line is white and larger.
+  A full-width song progress bar runs along the top edge, with elapsed/total
+  time at the upper right.
+  The top touchpad edge seeks the song while lyrics are open.
+  The right touchpad edge controls Spotify volume and shows a temporary
+  vertical volume bar on the lyric screen.
+  Two-finger tap pauses/plays without leaving the lyrics screen.
+  Swipe up/down or use two-finger scrolling to scroll manually for 8 seconds.
+  Top-left/top-right corners change tracks while lyrics remain open.
+  Tap anywhere closes lyrics.
+
+Morning brief:
+  Greeting, date, weather, first event, current music, AQI, recommendation and
+  a deterministic local fun fact of the day.
+  Auto-shows once per day between 04:00 and noon when enabled.
+  Can be triggered for testing from Settings -> Appearance -> Test morning brief.
+  Tap anywhere dismisses it.
+
+Health screen:
+  Read-only system cards for host, uptime, load, memory, disk, CPU temp,
+  Chromium process count/RSS, kiosk state and dashboard state.
+
+Guest screen:
+  Large welcome, local time, weather, Wi-Fi SSID.
+  Animated colour blobs drift in the background.
+  A locally generated Wi-Fi QR appears in the bottom-right corner.
+  Single-finger tap toggles Spotify playback.
+  Four-finger swipe up exits guest mode.
+  Guest mode exits automatically when its timer expires.
+
+Idle screen:
+  Minimal large clock, date and current weather after the configured idle
+  delay. Any input wakes it.
+
+COLOUR AMBIENCE
+---------------
+Album colours are extracted from the album art when possible. The colours are
+applied to:
+  - the Spotify tile background
+  - a whole-display tonal glow layer
+  - the lyrics screen background
+Ambience intensity is stored as ambientLevel (0-100). Zero turns there off.
+
+DAY RIBBON
+----------
+Optional full-width 24-hour strip fixed directly to the top edge of the
+display. It spans the entire viewport width and does not occupy the clock
+tile. The battery indicator overlays the right end of the same top line.
+The Time / swipe-to-switch label sits below the strip.
+
+The strip shows:
+  - timed calendar events as blocks
+  - all-day events as a thin sliver
+  - sunrise and sunset markers
+  - a live now marker
+Hidden by default and toggled from Settings home or Appearance.
+
+
+================================================================================
+7. INPUT AND GESTURE PIPELINE
+================================================================================
+Pipeline:
+
+  touchpad hardware
+       |
+       v
+  /dev/input/eventX  (read by trackpad.py)
+       |
+       v
+  trackpad.py gesture classifier
+       |
+       v
+  Server-Sent Events: http://127.0.0.1:8099/events
+       |
+       v
+  gesture integration IIFE in index.html
+       |
+       v
+  dashboard actions: focus, tap, select, scroll, slider, keyboard, overlay
+
+GESTURE SUMMARY
+---------------
+Three-finger swipe:
+  Moves keyboard-style focus between the four dashboard tiles.
+
+Four-finger swipe down:
+  Opens Settings.
+
+Four-finger swipe up:
+  Closes the current overlay or exits guest mode.
+
+One-finger horizontal slide:
+  Clock tile: cycles the highlighted clock.
+  Calendar: moves the selected day.
+  Lists/pickers: right opens a playlist, left goes back/closes.
+
+One-finger vertical slide:
+  Calendar: moves a week.
+  Lyrics overlay: scrolls lyrics manually.
+  Keyboard: moves the highlighted key.
+  Lists: steps through entries.
+
+Two-finger tap:
+  Play/pause Spotify in normal dashboard mode.
+  Ignored while an overlay is active, with guest mode using single tap.
+
+Two-finger vertical scroll:
+  Settings: moves between rows.
+  Lists/pickers: scrolls the list.
+  Weather and calendar lists: scroll content.
+
+Two-finger horizontal scroll:
+  Spotify tile: moves across playlists/lyrics/up next or other controls.
+  Clock tile: cycles clocks.
+  Calendar/weather pills: steps through modes.
+
+Top-left / top-right corners:
+  Previous / next track in normal dashboard mode.
+  Also skip tracks while the lyrics overlay is open.
+
+Top edge:
+  Brightness control in normal dashboard mode.
+  Song seek control while the lyrics screen is open.
+
+Right edge:
+  Spotify volume in normal dashboard mode and in the lyrics screen. The
+  Spotify tile volume column fades away after 4.5 seconds of inactivity and
+  reappears when the right edge is used again.
+
+Left edge:
+  Local device volume in normal dashboard mode.
+
+Tap:
+  Chooses the currently highlighted item.
+  Clock tile: activates the current contextual recommendation.
+  Guest screen: play/pause.
+  Lyrics: closes lyrics.
+  Other overlays: defaults to closing or confirming the current surface.
+
+SETTINGS ROW MODEL
+------------------
+The Settings sheet is now organized into pages:
+
+  Home:
+    Appearance
+    Clocks & weather
+    Sound & focus
+    Display
+    Network
+    System
+    Day ribbon quick toggle
+    Guest mode
+
+  Appearance:
+    Theme: light / auto / dark
+    Day/night UI
+    Auto-dim after sunset
+    Night brightness
+    Idle dim
+    Day ribbon
+    Album ambience
+    Ambience amount
+    Morning brief
+    Test morning brief (Show now)
+
+  Clocks & weather:
+    Clock 1
+    Clock 2
+    Clock 3
+    Weather location
+    Second hand: off / tick / smooth
+    Refresh all data
+
+  Sound & focus:
+    Meeting auto-pause
+    Focus length
+    Lyrics sync
+    Start focus now
+    Sleep timer
+    Wake time
+    Resume music at wake
+    Cancel focus / sleep
+
+  Display:
+    Brightness
+
+  Network:
+    Wi-Fi scan/join
+    SSH status
+
+  System:
+    System health
+    Restart Chromium (two-step confirm)
+    Shut down (two-step confirm)
+
+Settings rows are navigated/moved by scrolling, and selected with a tap.
+The rendering intentionally does not expose direct mouse-style clicks to the
+hidden cursor except for specific synthetic controls.
+
+WI-FI KEYBOARD
+--------------
+The keyboard is a full-screen TV-style keyboard:
+
+  - German QWERTZ layout
+  - Includes ä ö ü ß
+  - One-finger swipes move the highlighted key
+  - Tap selects the highlighted key
+  - Shift toggles case
+  - ?123 opens symbols
+  - Backspace key is selected by highlight
+  - Join submits the password
+  - Space and period are available
+  - Password field masks characters until the newest typed character
+
+The keyboard is intentionally modal and appears above Settings and overlays.
+
+
+================================================================================
+8. DATA FLOWS
+================================================================================
+SPOTIFY STATE
+-------------
+  Chromium poll -> GET /api/now (every 2.5 seconds)
+      -> server.now()
+      -> sp(GET /me/player)
+      -> Spotify Web API
+
+The frontend uses a requestAnimationFrame progress renderer that continuously
+extrapolates from the last Spotify poll and lightly eases small poll corrections
+instead of snapping. The fills use GPU-friendly scaleX transforms. It also uses
+local optimistic holds after interactions:
+
+  progress/seek hold
+  volume hold
+  play/pause hold
+  shuffle hold
+  repeat hold
+
+The backend coalesces simultaneous GET requests and caches successful results
+for 1.25 seconds; failed results are cached for 5 seconds. GET requests never
+pile up in unbounded parallel calls.
+
+Spotify actions:
+  Browser -> POST /api/<action>
+  /api/play, /api/pause, /api/next, /api/prev, /api/volume,
+  /api/shuffle, /api/repeat, /api/seek, /api/playlist, /api/playfrom,
+  /api/skipto, /api/transfer
+  -> server.control()
+  -> Spotify Web API
+
+The Spotify Connect device named "Vesper" is provided separately by
+soloist.service.
+
+CALENDAR
+--------
+  calendar ICS URLs in ~/.config/desk-dashboard/calendar.urls
+      -> server.cal_loop() refresh thread
+      -> recurring_ical_events expansion
+      -> /api/calendar?start=...&end=...
+      -> frontend month grid, agenda, next-event line, meeting mode,
+         morning brief and optional day ribbon
+
+MEETING MODE
+------------
+The frontend derives the current timed calendar event from agenda data.
+When a meeting starts:
+  - a meeting banner appears in the Spotify tile
+  - music is paused if meeting auto-pause is enabled
+  - meeting title and remaining time are shown
+When the event ends:
+  - music resumes only if Vesper paused it
+  - the banner disappears
+
+FOCUS
+-----
+  User selects duration in Settings or taps contextual advice
+      -> focusEnd timestamp saved in localStorage
+      -> focus overlay countdown
+      -> focused completion toast
+      -> focus badge in clock tile
+
+SLEEP
+-----
+  User selects a sleep duration
+      -> sleepEnd and sleepOrigVol saved
+      -> during the last 60 seconds Spotify volume fades
+      -> at zero music pauses
+      -> original Spotify volume restored
+      -> sleep badge in clock tile while active
+
+WAKE
+----
+  User selects a wake time
+      -> checkWake() runs every second
+      -> if auto-dim is on, brightness ramps in steps
+      -> if enabled, music resumes
+      -> morning brief is shown
+
+WEATHER
+-------
+  Frontend -> Open-Meteo forecast API
+      -> current temperature, feels-like, humidity, wind, code, rain chance,
+         hourly forecast, sunrise and sunset
+  Frontend -> Open-Meteo air quality API
+      -> current US AQI and PM2.5
+
+Weather is cached by the browser and refreshed every 10 minutes.
+The server does not proxy these requests.
+
+LYRICS
+------
+  Browser -> GET /api/lyrics?title=...&artist=...&duration=...
+      -> server.lyrics_lookup()
+      -> LRCLIB API
+      -> returns synced/plain lyrics
+  Browser parses [mm:ss.xx] timestamps and highlights the current line.
+
+Lyrics sync:
+  playback position + lyricsOffset
+  Positive offset moves matching earlier; negative offset moves matching later.
+  Current default: 0.0 seconds (LRCLIB timing already matches playback).
+  Adjustable under Settings -> Sound & focus -> Lyrics sync.
+
+The lyric viewport uses a normal block scroller, not flex-centering. The active
+line is anchored at about 38% of the lyrics box height so the screen shows
+roughly three past lines above and five upcoming lines below. Manual lyric
+scrolling temporarily pauses auto-follow for eight seconds.
+
+Lyric progress uses the same underlying #pbar/#ptrack state as the main player.
+The top-edge gesture writes to that shared seek control and updates the
+top-of-screen lyric progress bar immediately. The right-edge gesture likewise
+uses the existing Spotify volume control and reveals a temporary lyric volume
+bar.
+
+The one-time storage migration (featureSchema 3) resets the earlier experimental
+-1.5/+1.5 offsets to 0.0 for browsers that already saved one of those values.
+
+WIFI QR / GUEST MODE
+--------------------
+  Guest mode start
+      -> frontend GET /api/wifi-credentials
+      -> server finds current SSID with wpa_cli
+      -> server reads the matching psk from /etc/wpa_supplicant/*.conf
+      -> frontend builds WIFI:T:WPA;S:...;P:...;;
+      -> bundled qrcode-generator renders an inline SVG locally
+  No external QR service is involved.
+
+WIFI JOIN
+---------
+  Settings -> Network -> Wi-Fi
+      -> GET /api/wifi-scan
+      -> list of SSIDs
+      -> TV keyboard for secured networks
+      -> POST /api/wifi-join {ssid, psk}
+      -> backend wpa_cli add/select/save
+      -> GET /api/wifi-job polling until success/failure
+
+AUDIO OUTPUT
+------------
+  Browser -> http://127.0.0.1:8081/audio
+      -> sink list, default sink, volume
+  Browser -> POST /audio/default?name=...
+  Browser -> POST /audio/volume?name=...&percent=...
+      -> PipeWire/PulseAudio changes
+
+BRIGHTNESS
+----------
+  Settings -> Display
+      -> GET /api/brightness
+      -> POST /api/brightness?percent=...
+      -> brightnessctl on the backlight device
+
+HEALTH / MAINTENANCE
+--------------------
+  Settings -> System -> System health
+      -> GET /api/health
+      -> /proc/loadavg, /proc/meminfo, /proc/uptime
+      -> shutil.disk_usage("/")
+      -> thermal_zone temperature
+      -> ps Chromium process count and RSS
+      -> systemctl / systemctl --user service states
+
+  Restart Chromium
+      -> POST /api/restart-kiosk
+      -> systemctl --user restart vesper-kiosk.service
+      -> Chromium reloads the dashboard from localhost
+
+
+================================================================================
+9. BACKEND API SUMMARY
+================================================================================
+GET endpoints:
+  /                       index.html
+  /index.html             index.html
+  /api/now                normalized Spotify player state
+  /api/lyrics             synced/plain lyrics lookup
+  /api/health             system health summary
+  /api/calendar           expanded calendar events
+  /api/brightness         current backlight percentage
+  /api/power              whether the shutdown action is allowed
+  /api/ssh                SSH listener/session/enabled state
+  /api/battery            battery presence and charge
+  /api/playlists          Spotify playlists/liked songs
+  /api/queue              Spotify queue
+  /api/playlist-items     tracks inside a playlist
+  /api/devices            Spotify Connect devices
+  /api/wifi-scan          available Wi-Fi networks
+  /api/wifi-job           Wi-Fi join progress
+  /api/net                local network details
+  /api/wifi-credentials   current SSID and saved psk for guest QR
+
+POST endpoints:
+  /api/wifi-join          connect to a Wi-Fi network
+  /api/refresh-calendar   force calendar refresh
+  /api/restart-kiosk      restart the user-level Chromium service
+
+POST /api/<control> controls:
+  play, pause, next, prev, volume, brightness, poweroff, playlist, skipto,
+  playfrom, shuffle, repeat, transfer, seek
+
+The HTTP server uses HTTP/1.1 with keep-alive and safe handling for
+BrokenPipeError/ConnectionResetError caused by a kiosk restart.
+
+
+================================================================================
+10. FRONTEND STORAGE
+================================================================================
+The frontend stores a JSON object in localStorage under this key:
+
+  desk
+
+Current saved settings include:
+  theme                 light / auto / dark
+  clocks                three selected city names
+  weather               selected weather city
+  nightMode             day/night visual theme
+  autoDim               hardware dim around sunset
+  nightPct              night brightness percentage
+  idleDim               idle screen delay in minutes
+  ribbon                day ribbon enabled
+  ambient               album ambience enabled
+  ambientLevel          ambience intensity 0-100
+  brief                 morning brief enabled
+  meetingPause          automatic meeting pause
+  focusLen              default focus duration
+  wakeAt                wake time string
+  wakeResume            resume Spotify at wake
+  lastBrief             date of last morning brief
+  lastWake              date of last wake action
+  guestEnd              guest mode expiry timestamp
+  focusEnd              focus timer expiry timestamp
+  sleepEnd              sleep timer expiry timestamp
+  sleepOrigVol          original volume for sleep fade
+  secondHand            off / tick / smooth
+  lyricsOffset          lyrics timing offset in seconds
+  featureSchema         migration version
+
+Some fields are transient timestamps saved so a page reload can restore an
+active timer. Clearing browser local storage resets the dashboard settings.
+
+
+================================================================================
+11. EXTERNAL DEPENDENCIES
+================================================================================
+Spotify Web API:
+  access token refresh, player state, playlists, queue, devices, controls.
+
+Spotify Connect / Soloist:
+  exposes Vesper as a local playback target.
+
+LRCLIB:
+  synced and plain lyrics lookup.
+
+Open-Meteo:
+  weather, hourly forecast, sunrise/sunset and air quality.
+
+Calendar ICS:
+  configured in ~/.config/desk-dashboard/calendar.urls.
+
+Local system tools:
+  wpa_cli, iw, brightnessctl, systemctl, ss, ps, PipeWire tools.
+
+Bundled local JS:
+  qrcode-generator 1.4.4 (MIT) is embedded in index.html for guest Wi-Fi QR.
+
+No third-party QR service is used.
+
+
+================================================================================
+12. PERFORMANCE AND RELIABILITY DESIGN
+================================================================================
+- Chromium runs through a managed systemd unit, not an unmanaged shell loop.
+- Chromium uses GPU rasterization and Wayland, with background services reduced.
+- Spotify GET requests are single-flight and briefly cached.
+- The main and lyric progress bars are rendered with requestAnimationFrame,
+  scaleX transforms and light easing so polling corrections do not cause visible
+  jitter. The 250ms interval remains only for synced lyric-line updates.
+- Optimistic holds prevent play/pause, shuffle and repeat from flickering back
+  during an API round trip.
+- The trackpad uses an EventSource channel rather than injecting direct clicks;
+  gesture state is handled inside one dedicated script.
+- The display's ambient glow uses CSS gradients and album-art sampling, not
+  per-frame canvas animation.
+- Guest blobs use slow CSS transform animations.
+- The lyrics renderer uses CSS transitions and only updates classes/text when
+  the active line changes; manual scrolling pauses auto-follow temporarily.
+- The smooth clock second hand is driven directly from wall-clock seconds plus
+  milliseconds, not from the once-per-second text tick. This prevents the
+  second hand from snapping backward at the second boundary.
+- The top-edge day ribbon uses simple positioned blocks, no per-frame canvas.
+- The Spotify tile volume column uses a CSS opacity transition and a 4.5 second
+  inactivity timer; the gesture still works while the column is invisible.
+- Daily fun facts are selected from a local hard-coded list based on the day
+  of year, so they require no network request.
+- The QR code is rendered once per SSID/password pair and cached in page memory.
+- The health panel uses low-cost /proc, /sys and ps reads.
+
+
+================================================================================
+13. CURRENT DEFAULTS
+================================================================================
+Theme:                 dark
+Day/night UI:          on
+Auto-dim after sunset: off
+Night brightness:      25%
+Idle dim:              10 minutes
+Day ribbon:            off
+Album ambience:        on
+Ambience amount:       35%
+Morning brief:         on, once per day, between 04:00 and noon
+Meeting auto-pause:    on
+Focus length:          25 minutes
+Sleep timer:           not active
+Wake time:             off
+Second hand:           smooth
+Lyrics sync:           0.0 seconds
+Guest mode:            off
+
+
+================================================================================
+14. BACKUPS AND RESTORE
+================================================================================
+Backups are intentionally not included in this repository. A production kiosk
+should keep full local snapshots of:
+
+  ~/dashboard
+  ~/.config/sway
+  ~/.config/systemd/user
+  /etc/systemd/system/desk-dashboard.service
+
+Never commit those snapshots or any live config directory to Git without
+first removing credentials, tokens, calendar URLs and Wi-Fi data.
+
+
+15. OPERATIONS CHEAT SHEET
+================================================================================
+Connect:
+  ssh <kiosk-user>@<kiosk-ip>
+
+Dashboard service:
+  sudo systemctl status desk-dashboard.service
+  sudo systemctl restart desk-dashboard.service
+  journalctl -u desk-dashboard.service -b -n 100 --no-pager
+
+Kiosk service:
+  systemctl --user status vesper-kiosk.service
+  systemctl --user restart vesper-kiosk.service
+  journalctl --user -u vesper-kiosk.service -b -n 100 --no-pager
+
+Sway config:
+  export XDG_RUNTIME_DIR=/run/user/1000
+  export SWAYSOCK=$(ls /run/user/1000/sway-ipc.*.sock | head -1)
+  swaymsg -t get_version
+  swaymsg reload
+
+Audio helper:
+  systemctl --user status desk-audio.service
+  systemctl --user restart desk-audio.service
+
+Trackpad service:
+  ps -ef | grep '[t]rackpad.py'
+  curl -s http://127.0.0.1:8099/events   (will stream SSE)
+
+Direct endpoint checks:
+  curl -s http://127.0.0.1:8080/api/now
+  curl -s http://127.0.0.1:8080/api/health
+  curl -s http://127.0.0.1:8080/api/wifi-credentials
+  curl -s 'http://127.0.0.1:8080/api/lyrics?title=...&artist=...&duration=...'
+
+Check syntax before deploying:
+  python3 -m py_compile /home/<kiosk-user>/dashboard/server.py
+  node --check <extracted inline JS>
+
+
+================================================================================
+16. KNOWN LIMITATIONS AND NOTES
+================================================================================
+- The Spotify API can be slow. The UI is intentionally optimistic; progress
+  bars use requestAnimationFrame with light smoothing to absorb poll timing
+  variations.
+- Lyrics timing can vary by track/version; use Settings -> Sound & focus ->
+  Lyrics sync to move matching earlier or later.
+- Album-art colour extraction depends on browser CORS access to the image;
+  a deterministic fallback palette is used if extraction is unavailable.
+- Wi-Fi QR requires the current network's plaintext PSK to be readable from
+  /etc/wpa_supplicant. If it is not available, the guest QR falls back to an
+  SSID-only code.
+- Guest mode intentionally ignores corner taps to prevent accidental exits.
+  Exit with a four-finger swipe up or wait for the guest timer to expire.
+- Settings are stored in Chromium local storage, not in the Python server.
+- The dashboard server and gesture/audio servers bind only to 127.0.0.1.
+  Treat SSH access to the device as the administrative boundary.
+- If the dashboard page is updated, restart vesper-kiosk.service so Chromium
+  fetches the new HTML. The server sends no-store headers; browser cache is not
+  the intended deployment mechanism.
+- Keep the backup folders until you are happy with the current state.
+
+================================================================================
+END OF DOCUMENT
+================================================================================

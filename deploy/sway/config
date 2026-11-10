@@ -1,0 +1,31 @@
+set $mod Mod1
+
+default_border none
+focus_follows_mouse no
+seat * hide_cursor 2000
+
+input type:keyboard {
+    xkb_layout de
+}
+
+# maintenance: Alt+Return terminal, Alt+Shift+x close, Alt+Shift+c reload, Alt+Shift+BackSpace quit
+bindsym $mod+Return exec foot
+bindsym $mod+Shift+x kill
+bindsym $mod+Shift+c reload
+bindsym $mod+Shift+BackSpace exec swaymsg exit
+
+# Chromium is managed by ~/.config/systemd/user/vesper-kiosk.service
+exec systemctl --user start vesper-kiosk.service
+
+include /etc/sway/config.d/*
+
+input type:touchpad {
+    tap enabled
+    tap_button_map lrm
+    drag enabled
+    drag_lock disabled
+    natural_scroll enabled
+}
+seat * hide_cursor 3000
+
+exec sh -c 'while true; do python3 $HOME/dashboard/trackpad.py; sleep 2; done'

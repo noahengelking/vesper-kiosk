@@ -1,0 +1,14 @@
+[Unit]
+Description=Desk dashboard server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=<kiosk-user>
+WorkingDirectory=/home/<kiosk-user>/dashboard
+ExecStart=/usr/bin/python3 /home/<kiosk-user>/dashboard/server.py
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
