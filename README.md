@@ -63,7 +63,8 @@ full-screen Chromium app window.
 ```
 
 A more detailed plain-text architecture and component reference is in
-[`docs/ARCHITECTURE.txt`](docs/ARCHITECTURE.txt).
+[`docs/ARCHITECTURE.txt`](docs/ARCHITECTURE.txt). A complete Spotify developer
+app walkthrough is in [`docs/SPOTIFY_SETUP.md`](docs/SPOTIFY_SETUP.md).
 
 ## Repository layout
 
@@ -118,14 +119,21 @@ python3 -m pip install -r requirements.txt
    python3 -m pip install -r requirements.txt
    ```
 
-3. Create your private configuration:
+3. Create your private Spotify configuration:
 
    ```bash
    cp dashboard/config.example.json dashboard/config.json
    ```
 
-   Edit `dashboard/config.json` and set your Spotify application client ID.
-   Do not commit this file.
+   Create a Spotify developer app and put its Client ID in
+   `dashboard/config.json`. The redirect URI must be exactly:
+
+   ```text
+   http://127.0.0.1:8888/callback
+   ```
+
+   Full walkthrough: [`docs/SPOTIFY_SETUP.md`](docs/SPOTIFY_SETUP.md).
+   Do not commit `dashboard/config.json`.
 
 4. Authenticate Spotify:
 
@@ -141,6 +149,10 @@ python3 -m pip install -r requirements.txt
 
    Then run `spotify_login.py` on the kiosk and open the URL it prints.
    Tokens are stored at `~/.config/desk-dashboard/spotify.json`.
+
+   Spotify Premium is required for Web API playback control. Soloist is
+   optional and only needed if you want the kiosk itself to appear as a
+   Spotify Connect device.
 
 5. Configure calendar sources:
 
