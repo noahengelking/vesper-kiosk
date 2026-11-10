@@ -218,12 +218,15 @@ consumed by the Chromium kiosk and not exposed directly to the LAN.
 
 Spotify tile layout
 -------------------
-The Spotify tile reserves a fixed right-hand volume column even while its
-contents fade after inactivity. The remaining music column is padded
-symmetrically so the album art, title, progress bar and transport controls sit
-centred within the tile. The progress track and its fill use the same pill
-radius, with the fill inset slightly inside the track for identical rounded
-ends on both sides.
+The Spotify tile uses its full width for the album art, title, progress bar and
+transport controls. The volume control is a floating overlay on the right that
+is hidden on startup and shown only while the right touchpad edge is being
+used. It does not reserve layout space and therefore cannot move or narrow the
+rest of the music widget. The album/title group is horizontally centred, while
+the progress bar and transport row stretch across the full content width.
+
+The progress fill is width-based, not transform-scaled, so its rounded left and
+right ends keep identical pill geometry at every progress value.
 
 The visible main screen is a 2 x 2 grid.
 
@@ -500,8 +503,9 @@ SPOTIFY STATE
 
 The frontend uses a requestAnimationFrame progress renderer that continuously
 extrapolates from the last Spotify poll and lightly eases small poll corrections
-instead of snapping. The fills use GPU-friendly scaleX transforms. It also uses
-local optimistic holds after interactions:
+instead of snapping. The fills are updated from animation frames with direct width changes so both
+pill ends retain the same rounded geometry. It also uses local optimistic holds
+after interactions:
 
   progress/seek hold
   volume hold
@@ -765,9 +769,10 @@ No third-party QR service is used.
 - Chromium runs through a managed systemd unit, not an unmanaged shell loop.
 - Chromium uses GPU rasterization and Wayland, with background services reduced.
 - Spotify GET requests are single-flight and briefly cached.
-- The main and lyric progress bars are rendered with requestAnimationFrame,
-  scaleX transforms and light easing so polling corrections do not cause visible
-  jitter. The 250ms interval remains only for synced lyric-line updates.
+- The main and lyric progress bars are rendered with requestAnimationFrame and
+  light easing so polling corrections do not cause visible jitter. The 250ms
+  interval remains only for synced lyric-line updates. Fill widths are updated
+  directly so both rounded ends retain the same pill geometry.
 - Optimistic holds prevent play/pause, shuffle and repeat from flickering back
   during an API round trip.
 - The trackpad uses an EventSource channel rather than injecting direct clicks;

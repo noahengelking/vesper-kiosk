@@ -94,9 +94,9 @@ button{font:inherit;color:var(--fg);background:none;border:0;cursor:pointer}
 .agd.today{color:var(--acc)}
 
 /* music */
-.music{display:flex;gap:2.5vw;flex:1;min-height:0;align-items:stretch}
-.mleft{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:space-evenly;gap:1.2vh;padding-left:1.2vw}
-.np{display:flex;gap:2vw;align-items:center}
+.music{position:relative;display:flex;flex:1;min-height:0;align-items:stretch}
+.mleft{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:space-evenly;gap:1.2vh;padding:0 1.2vw}
+.np{display:flex;gap:2vw;align-items:center;justify-content:center}
 #art{height:14vh;width:14vh;object-fit:cover;background:var(--line);flex:none}
 .meta{min-width:0;position:relative}
 #title{font-size:3vh;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -121,7 +121,7 @@ button{font:inherit;color:var(--fg);background:none;border:0;cursor:pointer}
 .times{display:flex;justify-content:space-between;font-size:1.9vh;color:var(--dim)}
 .pbar{height:7vh;display:flex;align-items:center;touch-action:none;cursor:pointer}
 .ptrack{height:1.8vh;width:100%;background:var(--line);position:relative;border-radius:1vh}
-.pfill{position:absolute;left:.35vh;top:.35vh;bottom:.35vh;width:calc(100% - .7vh);transform:scaleX(0);transform-origin:left center;background:var(--acc);border-radius:1vh;will-change:transform}
+.pfill{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--acc);border-radius:1vh;will-change:width}
 .pthumb{position:absolute;top:50%;left:0;width:3.2vh;height:3.2vh;border-radius:50%;background:var(--fg);transform:translate(-50%,-50%)}
 .ctl{display:flex;justify-content:center;align-items:center;gap:2.5vw}
 .ctl button{position:relative;width:10vh;height:10vh;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--btn)}
@@ -131,7 +131,7 @@ button{font:inherit;color:var(--fg);background:none;border:0;cursor:pointer}
 .ctl button.sm.on{color:var(--acc)}
 .ctl button.sm svg{width:3.4vh;height:3.4vh;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 #one{display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:1.3vh}
-.mright{width:8vh;flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1vh;margin-left:1.2vw}
+.mright{position:absolute;right:.5vw;top:50%;transform:translateY(-50%);height:72%;width:7.5vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1vh;z-index:4}
 .vlab{font-size:2vh;color:var(--dim)}
 .vbar{flex:1;min-height:0;width:100%;display:flex;justify-content:center;touch-action:none;cursor:pointer;padding:1.8vh 0}
 .vtrack{width:1.8vh;height:100%;background:var(--line);position:relative;border-radius:1vh}
@@ -229,7 +229,7 @@ body.ribbon-on .dayribbon{display:block}
 #focusScreen .vsub{max-width:65vw}
 #lyricsScreen{background:var(--bg);padding:6.2vh 10vw 5vh}
 .lyrics-progress{position:absolute;top:0;left:0;right:0;height:1.35vh;z-index:3;background:rgba(125,123,118,.16);overflow:visible}
-.lyrics-progress-fill{position:absolute;left:0;top:0;bottom:0;width:100%;transform:scaleX(0);transform-origin:left center;background:var(--acc);will-change:transform}
+.lyrics-progress-fill{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--acc);border-radius:1vh;will-change:width}
 .lyrics-progress-thumb{position:absolute;top:50%;left:0;width:1.8vh;height:1.8vh;border-radius:50%;background:var(--fg);transform:translate(-50%,-50%);opacity:0;transition:opacity .18s;box-shadow:0 0 0 .25vh var(--bg)}
 #lyricsScreen.seeking .lyrics-progress-thumb{opacity:1}
 .lyrics-time{position:absolute;top:2.2vh;right:10vw;font-size:1.55vh;color:var(--dim);font-variant-numeric:tabular-nums;z-index:3}
@@ -355,7 +355,7 @@ html[data-daynight=night] #spotifyTile.ambient{filter:saturate(.82) brightness(.
           <button id="rep" class="sm" aria-label="Repeat"><svg viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg><span id="one">1</span></button>
         </div>
       </div>
-      <div class="mright">
+      <div class="mright idle">
         <div class="vlab" id="vlab">0</div>
         <div class="vbar" id="vbar"><div class="vtrack" id="vtrack"><div class="vfill" id="vfill"></div><div class="vthumb" id="vthumb"></div></div></div>
       </div>
@@ -978,7 +978,7 @@ function paintMainProgress(f, ms) {
   f = Math.max(0, Math.min(1, Number(f) || 0));
   const p = (f * 100) + '%';
   const fill = $('pfill');
-  if (fill) { fill.style.transform = 'scaleX(' + f + ')'; fill.dataset.frac = String(f); }
+  if (fill) { fill.style.width = p; fill.dataset.frac = String(f); }
   if ($('pthumb')) $('pthumb').style.left = p;
   const cur = fmt(ms || 0), tot = fmt(st && st.state === 'ok' ? (st.duration || 0) : 0);
   if ($('tcur') && cur !== lastMainTime) { $('tcur').textContent = cur; lastMainTime = cur; }
@@ -988,7 +988,7 @@ function paintLyricsProgress(f, ms) {
   if (!$('lyricsScreen').classList.contains('on')) return;
   f = Math.max(0, Math.min(1, Number(f) || 0));
   const p = (f * 100) + '%';
-  if ($('lyricsProgressFill')) $('lyricsProgressFill').style.transform = 'scaleX(' + f + ')';
+  if ($('lyricsProgressFill')) $('lyricsProgressFill').style.width = p;
   if ($('lyricsProgressThumb')) $('lyricsProgressThumb').style.left = p;
   const t = fmt(ms || 0) + ' / ' + fmt(st && st.state === 'ok' ? (st.duration || 0) : 0);
   if ($('lyricsTime') && t !== lastLyricsTime) { $('lyricsTime').textContent = t; lastLyricsTime = t; }
@@ -2295,7 +2295,6 @@ setTimeout(() => showMorningBrief(false), 6000);
 if (S.focusEnd > Date.now()) showFocus();
 if (S.guestEnd > Date.now()) { $('guestScreen').classList.add('on'); updateGuest(); loadGuestQr(); }
 else if (S.guestEnd) { S.guestEnd = 0; save(); }
-showVolumeControls();
 noteActivity();
 
 </script>
