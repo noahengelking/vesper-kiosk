@@ -64,7 +64,9 @@ full-screen Chromium app window.
 
 A more detailed plain-text architecture and component reference is in
 [`docs/ARCHITECTURE.txt`](docs/ARCHITECTURE.txt). A complete Spotify developer
-app walkthrough is in [`docs/SPOTIFY_SETUP.md`](docs/SPOTIFY_SETUP.md).
+app walkthrough is in [`docs/SPOTIFY_SETUP.md`](docs/SPOTIFY_SETUP.md). A
+file-by-file explanation of both the repository and the runtime installation
+is in [`docs/FILE_LAYOUT.md`](docs/FILE_LAYOUT.md).
 
 ## Repository layout
 
