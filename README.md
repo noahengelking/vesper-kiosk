@@ -5,11 +5,6 @@ clock, Spotify, calendar, weather, synced lyrics, focus and sleep timers,
 meeting awareness, guest mode, Wi-Fi onboarding and local system health into
 one wall-panel interface.
 
-There is also a native **Vesper for macOS** menu-bar app in [`macos/`](macos/).
-It takes over one display on demand and uses the built-in Magic Trackpad
-gestures directly, with no browser, local server, or gesture daemon. See the
-[macOS README](macos/README.md) for build and usage instructions.
-
 The interface is designed for a touchpad or touchscreen kiosk rather than a
 desktop mouse. It uses large UI targets, gesture-driven navigation and a
 full-screen Chromium app window.
@@ -91,7 +86,6 @@ config/
 deploy/systemd/         systemd unit examples
 deploy/sway/config      example Sway config
 docs/ARCHITECTURE.txt   detailed component and data-flow reference
-macos/                  native macOS menu-bar app (Swift/SwiftUI)
 ```
 
 ## Requirements

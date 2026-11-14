@@ -26,10 +26,3 @@ backups/
 # Platform junk
 .DS_Store
 Thumbs.db
-
-# macOS Swift app build artifacts
-macos/.build/
-macos/.swiftpm/
-macos/dist/
-macos/*.xcodeproj/xcuserdata/
-macos/*.xcworkspace/xcuserdata/

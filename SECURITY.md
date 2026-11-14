@@ -38,22 +38,3 @@ feature or change the endpoint in `dashboard/server.py`.
 
 Use environment files with restrictive permissions and keep them outside the
 repository.
-
-## Native macOS app
-
-The `macos/` app is intentionally different from the kiosk: it runs no HTTP
-server and does not read Wi-Fi credentials. It uses:
-
-- Apple Events / AppleScript to read and control the local Spotify app
-- EventKit for calendar events, only after you grant access
-- Open-Meteo for weather at the coordinates configured in Settings
-- LRCLIB for lyrics, using the current track title/artist/duration
-
-Vesper does not store Spotify OAuth tokens on macOS. The app requires no
-Accessibility or Input Monitoring permission for its own Magic Trackpad gesture
-handling. Automation and Calendar permissions can be revoked at any time in
-System Settings → Privacy & Security.
-
-The package is ad-hoc signed for local use. If you redistribute a build, sign and
-notarize it with your own Apple Developer identity and review the permissions
-before publishing.

@@ -14,10 +14,3 @@ jobs:
           python-version: "3.x"
       - name: Compile Python sources
         run: python -m py_compile dashboard/*.py
-
-  macos:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build native macOS app
-        run: swift build --package-path macos -c release
