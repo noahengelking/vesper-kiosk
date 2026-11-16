@@ -49,3 +49,17 @@ Then, on macOS:
 The cache is **writeback**, which improves small-write performance but can lose
 recently cached writes on power loss. Use a UPS if the data is important. The
 cache file also wears the eMMC; monitor it over time.
+
+## macOS Time Machine destination
+
+The live Mac can use either **System Settings → General → Time Machine →
+Add Backup Disk…**, selecting the advertised **VESPER** share, or this command:
+
+```bash
+sudo tmutil setdestination -a \
+  "smb://vesper@vesper.local/VesperTimeMachine"
+```
+
+Use the SMB password set with `smbpasswd -a vesper`. The share reports an
+800 GiB Time Machine quota and is advertised over Bonjour by Samba's built-in
+`fruit:time machine` support.
