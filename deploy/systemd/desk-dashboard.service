@@ -4,6 +4,8 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
+# The web backend follows physical display presence in kiosk mode.
+ExecCondition=/usr/local/bin/vesper-display-present
 User=<kiosk-user>
 WorkingDirectory=/home/<kiosk-user>/dashboard
 ExecStart=/usr/bin/python3 /home/<kiosk-user>/dashboard/server.py

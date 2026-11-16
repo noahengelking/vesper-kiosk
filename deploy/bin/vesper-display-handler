@@ -1,0 +1,10 @@
+#!/bin/sh
+# Called by udev when DRM connector state changes.
+# Keep the kiosk web backend running only while a display is present.
+sleep 1
+if /usr/local/bin/vesper-display-present; then
+    systemctl --no-block start desk-dashboard.service
+else
+    systemctl --no-block stop desk-dashboard.service
+fi
+exit 0

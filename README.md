@@ -283,3 +283,8 @@ services continue running normally.
 The `vesper-kiosk.service` example in `deploy/systemd/` also has an
 `ExecCondition` on the same display check. It is started by the Sway config
 when a display is present, so it does not need to be enabled at login.
+
+For the dashboard backend, install `deploy/bin/vesper-display-handler` and
+`deploy/udev/99-vesper-display.rules`; the included system service example has
+the same `ExecCondition`, and the udev handler starts/stops it when a monitor
+is plugged in or removed.
