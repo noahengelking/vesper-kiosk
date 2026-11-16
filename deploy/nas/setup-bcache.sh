@@ -5,17 +5,12 @@
 set -euo pipefail
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-BACKING="${1:-}"
+BACKING="${2:-}"
 CACHE_IMG="${CACHE_IMG:-/var/lib/vesper/bcache-cache.img}"
 CACHE_SIZE="${CACHE_SIZE:-64G}"
 MOUNT="${MOUNT:-/srv/vesper}"
 
-if [ "${1:-}" = "--yes-wipe" ]; then
-  shift
-  BACKING="${1:-}"
-fi
-
-if [ -z "$BACKING" ] || [ "${2:-}" != "" ]; then
+if [ "${1:-}" != "--yes-wipe" ] || [ -z "$BACKING" ] || [ "${3:-}" != "" ]; then
   echo "Usage: $0 --yes-wipe /dev/sdX" >&2
   exit 2
 fi

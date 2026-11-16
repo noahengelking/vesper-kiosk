@@ -1,54 +1,26 @@
 #!/usr/bin/env bash
 set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-install -m 0755 /tmp/vesper-bcache-up /usr/local/sbin/vesper-bcache-up
+
+[[ $EUID -eq 0 ]] || { echo "run as root" >&2; exit 1; }
+install -m 0755 "$SCRIPT_DIR/vesper-bcache-up" /usr/local/sbin/vesper-bcache-up
+install -m 0644 "$SCRIPT_DIR/vesper-bcache.service" /etc/systemd/system/vesper-bcache.service
 
 cat > /etc/modules-load.d/vesper-bcache.conf <<'MODULES'
 bcache
 loop
 MODULES
 
-cat > /etc/systemd/system/vesper-bcache.service <<'UNIT'
-[Unit]
-Description=Vesper NAS bcache writeback cache
-DefaultDependencies=no
-After=systemd-udevd.service
-Before=local-fs.target srv-vesper.mount
-Wants=systemd-udevd.service
+if ! grep -q 'LABEL=VESPER_NAS' /etc/fstab; then
+    cat "$SCRIPT_DIR/fstab.example" >> /etc/fstab
+fi
 
-[Service]
-Type=oneshot
-RemainAfterExit=yes
-ExecStart=/usr/local/sbin/vesper-bcache-up
-TimeoutStartSec=120
-
-[Install]
-WantedBy=sysinit.target
-UNIT
-
-# Add the NAS mount if it is not already present.
-python3 - <<'PY'
-from pathlib import Path
-p = Path('/etc/fstab')
-text = p.read_text()
-line = 'LABEL=VESPER_NAS /srv/vesper ext4 defaults,noatime,nofail,x-systemd.requires=vesper-bcache.service,x-systemd.after=vesper-bcache.service 0 2\n'
-if 'LABEL=VESPER_NAS' not in text:
-    if not text.endswith('\n'):
-        text += '\n'
-    text += line
-    p.write_text(text)
-PY
-
-mkdir -p /etc/systemd/system/smbd.service.d
-cat > /etc/systemd/system/smbd.service.d/vesper-nas.conf <<'UNIT'
-[Unit]
-RequiresMountsFor=/srv/vesper
-After=srv-vesper.mount vesper-bcache.service
-UNIT
+install -d -m 0755 /etc/systemd/system/smbd.service.d
+install -m 0644 "$SCRIPT_DIR/smbd-vesper-nas.conf" /etc/systemd/system/smbd.service.d/vesper-nas.conf
 
 systemctl daemon-reload
-systemctl enable vesper-bcache.service
-systemctl enable smbd.service
+systemctl enable vesper-bcache.service smbd.service
 systemctl disable --now nmbd.service 2>/dev/null || true
 systemctl start vesper-bcache.service
 mount -a
@@ -58,14 +30,10 @@ systemctl restart avahi-daemon.service
 echo '=== bcache state ==='
 cat /sys/block/bcache0/bcache/cache_mode 2>/dev/null || true
 cat /sys/block/bcache0/bcache/state 2>/dev/null || true
-cat /sys/block/bcache0/bcache/cache 2>/dev/null || true
 echo
 echo '=== mount ==='
 findmnt /srv/vesper
 df -hT /srv/vesper /
-echo
-echo '=== fstab ==='
-tail -5 /etc/fstab
 echo
 echo '=== services ==='
 systemctl is-enabled vesper-bcache.service smbd.service nmbd.service avahi-daemon.service
