@@ -296,7 +296,3 @@ A headless machine can run Samba as a wireless Time Machine destination while
 keeping the kiosk available only when a display is attached. See
 [`deploy/nas/README.md`](deploy/nas/README.md) for the bcache-backed layout,
 Samba shares and install steps.
-
-The NAS dashboard also accepts a small Mac battery-status agent. Install it
-with `deploy/mac/install-battery-agent.sh` to show the MacBook battery
-percentage in the browser dashboard.

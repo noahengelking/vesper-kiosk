@@ -97,11 +97,11 @@ a{color:var(--amber);text-decoration:none}a:hover{text-decoration:underline}
     </section>
 
     <section class="card quarter">
-      <div class="label">MacBook battery</div>
+      <div class="label">Server battery</div>
       <div class="big" id="batteryPct">—</div>
-      <div class="sub" id="batteryState" style="margin-top:9px">Waiting for Mac agent…</div>
+      <div class="sub" id="batteryState" style="margin-top:9px">—</div>
       <div class="bar"><i id="batteryBar"></i></div>
-      <div class="row"><span>Last update</span><span id="batteryUpdated">—</span></div>
+      <div class="row"><span>AC power</span><span id="batteryAC">—</span></div>
     </section>
 
     <section class="card quarter">
@@ -166,12 +166,14 @@ async function refresh(){
     $('netRx').textContent=fmtRate(s.net.rx);
     const labels={smbd:'Samba',avahi:'Bonjour',bcache:'bcache',web:'Web'};
     $('services').innerHTML=Object.entries(s.services).map(([k,v])=>`<span class="pill ${v?'good':'bad'}">${v?'●':'○'} ${labels[k]||k}</span>`).join('');
-    const bat=s.mac_battery||{};
+    const bat=s.server_battery||{};
     const batOk=bat.available && bat.percent!=null;
     $('batteryPct').textContent=batOk?`${Math.round(bat.percent)}%`:'—';
-    $('batteryState').textContent=batOk?(bat.charging?'Charging':'On battery'):'Waiting for Mac agent…';
+    $('batteryState').textContent=batOk?(bat.ac_online?(bat.charging?'Charging':'AC connected'):`${bat.status} · plug in charger`):'Battery unavailable';
+    $('batteryState').style.color=batOk && !bat.ac_online ? 'var(--red)' : 'var(--dim)';
     $('batteryBar').style.width=batOk?Math.min(100,bat.percent)+'%':'0%';
-    $('batteryUpdated').textContent=batOk && bat.age!=null?`${Math.round(bat.age)}s ago`:'—';
+    $('batteryBar').style.background=batOk && bat.percent<20 ? 'var(--red)' : 'linear-gradient(90deg,var(--amber),#e98b48)';
+    $('batteryAC').textContent=batOk?(bat.ac_online?'Connected':'Not connected'):'—';
     $('siteCard').style.display=s.site.available?'block':'none';
     $('footerHost').textContent=s.host+'.local · '+s.now;
   } catch(e) {

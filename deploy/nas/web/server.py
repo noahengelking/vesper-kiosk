@@ -22,8 +22,6 @@ TM_QUOTA_BYTES = 800 * 1024**3
 
 _state_lock = threading.Lock()
 _previous = {"time": 0.0, "net": None, "disk": None}
-_battery_lock = threading.Lock()
-_mac_battery = {"percent": None, "charging": None, "updated": 0.0}
 
 
 def read_text(path: str, default: str = "") -> str:
@@ -200,16 +198,19 @@ def cache_state() -> dict:
     }
 
 
-def mac_battery_state() -> dict:
-    with _battery_lock:
-        battery = dict(_mac_battery)
-    age = time.time() - battery["updated"] if battery["updated"] else None
-    available = battery["percent"] is not None and age is not None and age < 300
+def battery_state() -> dict:
+    base = Path("/sys/class/power_supply/BAT0")
+    if not base.exists():
+        return {"available": False, "percent": None, "status": "unavailable", "ac_online": None, "charging": False}
+    percent = read_int(f"{base}/capacity", -1)
+    status = read_text(f"{base}/status", "Unknown")
+    ac_online = read_int("/sys/class/power_supply/AC/online", 0) == 1
     return {
-        "available": available,
-        "percent": battery["percent"],
-        "charging": battery["charging"],
-        "age": round(age, 1) if age is not None else None,
+        "available": percent >= 0,
+        "percent": percent,
+        "status": status,
+        "ac_online": ac_online,
+        "charging": status in {"Charging", "Full"},
     }
 
 
@@ -274,7 +275,7 @@ def status() -> dict:
             "available": (SITE_ROOT / "index.html").exists(),
             "url": "/site/",
         },
-        "mac_battery": mac_battery_state(),
+        "server_battery": battery_state(),
     }
 
 
@@ -322,32 +323,6 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-cache")
         self.end_headers()
         self.wfile.write(body)
-
-    def do_POST(self):
-        if not self._client_allowed():
-            self.send_error(403)
-            return
-        parsed = urllib.parse.urlparse(self.path)
-        if parsed.path != "/api/client/battery":
-            self.send_error(404)
-            return
-        try:
-            length = int(self.headers.get("Content-Length", "0"))
-            if length <= 0 or length > 4096:
-                raise ValueError("invalid length")
-            payload = json.loads(self.rfile.read(length).decode())
-            percent = float(payload["percent"])
-            if not (0 <= percent <= 100):
-                raise ValueError("invalid percentage")
-            with _battery_lock:
-                _mac_battery.update(
-                    percent=round(percent, 1),
-                    charging=bool(payload.get("charging")),
-                    updated=time.time(),
-                )
-            self._send_json({"ok": True})
-        except Exception:
-            self._send_json({"ok": False, "error": "invalid battery payload"}, 400)
 
     def do_GET(self):
         if not self._client_allowed():

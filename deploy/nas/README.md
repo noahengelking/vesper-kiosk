@@ -122,3 +122,6 @@ sudo vesper-safe-poweroff
 The script stops SMB and the dashboard, drains bcache dirty data, syncs and
 unmounts `/srv/vesper`, stops bcache, and powers off. Do not move the HDD until
 the NAS is fully powered off.
+
+The dashboard's battery card reads the server's `BAT0` power supply and AC
+state directly. It does not depend on the Mac.
