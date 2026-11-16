@@ -104,3 +104,21 @@ sudo poweroff
 
 Power down first, move the cable, then boot and verify `/srv/vesper` is mounted
 before starting Time Machine again.
+
+## Safe shutdown before moving the HDD
+
+Run this on the Mac first:
+
+```bash
+tmutil stopbackup
+```
+
+Then, on the NAS:
+
+```bash
+sudo vesper-safe-poweroff
+```
+
+The script stops SMB and the dashboard, drains bcache dirty data, syncs and
+unmounts `/srv/vesper`, stops bcache, and powers off. Do not move the HDD until
+the NAS is fully powered off.

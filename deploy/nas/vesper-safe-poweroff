@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Safe shutdown for the Vesper NAS: stop writers, flush, unmount, then power off.
+set -euo pipefail
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+[[ $EUID -eq 0 ]] || { echo "Run with sudo: sudo vesper-safe-poweroff" >&2; exit 1; }
+
+echo "[1/5] Stopping Samba and web dashboard..."
+systemctl stop smbd.service vesper-web.service 2>/dev/null || true
+
+echo "[2/5] Flushing writes..."
+sync
+
+# If bcache is present, ask it to drain dirty data before unmounting.
+BCACHE_SYS=$(ls -d /sys/block/bcache[0-9]* 2>/dev/null | head -1 || true)
+if [ -n "$BCACHE_SYS" ]; then
+    [ -w "$BCACHE_SYS/bcache/writeback_percent" ] && echo 0 > "$BCACHE_SYS/bcache/writeback_percent" || true
+    sync
+    for _ in $(seq 1 60); do
+        DIRTY=$(cat "$BCACHE_SYS/bcache/dirty_data" 2>/dev/null || echo "unknown")
+        [ "$DIRTY" = "0" ] || [ "$DIRTY" = "0.0k" ] && break
+        sleep 2
+    done
+    echo "       bcache dirty data: $(cat "$BCACHE_SYS/bcache/dirty_data" 2>/dev/null || echo unknown)"
+fi
+
+echo "[3/5] Unmounting /srv/vesper..."
+if mountpoint -q /srv/vesper; then
+    umount /srv/vesper
+fi
+sync
+
+echo "[4/5] Stopping bcache service..."
+systemctl stop vesper-bcache.service 2>/dev/null || true
+
+echo "[5/5] Powering off..."
+sync
+systemctl poweroff
