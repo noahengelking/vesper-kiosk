@@ -1,0 +1,9 @@
+# Add this block to the kiosk user's ~/.profile.
+# It waits for a physical display before starting Sway. On a headless boot
+# the login shell stays quiet and all system-level NAS services keep running.
+if [ -z "${WAYLAND_DISPLAY:-}" ] && [ "$(tty)" = /dev/tty1 ] && command -v sway >/dev/null; then
+  while ! /usr/local/bin/vesper-display-present; do
+    sleep 2
+  done
+  exec sway > ~/sway.log 2>&1
+fi

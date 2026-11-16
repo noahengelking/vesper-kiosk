@@ -4,6 +4,8 @@ After=graphical-session.target
 StartLimitIntervalSec=0
 
 [Service]
+# Only permit the graphical kiosk when a physical display is attached.
+ExecCondition=/usr/local/bin/vesper-display-present
 Type=simple
 Environment=XDG_RUNTIME_DIR=%t
 Environment=WAYLAND_DISPLAY=wayland-1

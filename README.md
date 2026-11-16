@@ -270,3 +270,16 @@ licensed. See [`NOTICE.md`](NOTICE.md).
 This project was built with substantial AI assistance. Review the code,
 systemd units, network exposure, credentials handling and security assumptions
 before using it on your own hardware. See [`AI_DISCLAIMER.md`](AI_DISCLAIMER.md).
+
+## Headless boot / NAS mode
+
+The kiosk can share a machine with always-on NAS services. Install
+`deploy/bin/vesper-display-present` and append
+`deploy/profile/vesper-display-autostart` to the kiosk user's `~/.profile`.
+The login shell then waits for a physical DRM connector before starting Sway.
+With no display connected, Chromium and the kiosk session stay stopped; NAS
+services continue running normally.
+
+The `vesper-kiosk.service` example in `deploy/systemd/` also has an
+`ExecCondition` on the same display check. It is started by the Sway config
+when a display is present, so it does not need to be enabled at login.

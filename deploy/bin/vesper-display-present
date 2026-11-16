@@ -1,0 +1,12 @@
+#!/bin/sh
+# Exit 0 only when at least one physical DRM connector is connected.
+# VESPER_DRM_ROOT exists so the logic can be tested without touching sysfs.
+DRM_ROOT="${VESPER_DRM_ROOT:-/sys/class/drm}"
+
+for status in "$DRM_ROOT"/card*-*/status; do
+    [ -r "$status" ] || continue
+    if [ "$(cat "$status")" = "connected" ]; then
+        exit 0
+    fi
+done
+exit 1
