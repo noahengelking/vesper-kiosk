@@ -78,3 +78,11 @@ clients, uptime, network and disk throughput. It is LAN-only and runs as the
 
 A static site can be hosted from `VesperFiles/www`. Anything placed there is
 served at `http://vesper.local:8088/site/`.
+
+## Wi-Fi tuning
+
+`install-wifi-tuning.sh` disables the RTL8821CU adapter's deep low-power state
+and runtime power saving. This modestly improves latency and receive throughput
+on the USB Wi-Fi adapter. The NAS has no built-in Ethernet and the adapter is a
+1x1 RTL8821CU; a USB 3 Ethernet adapter is the best way to significantly
+increase Time Machine throughput.

@@ -1,0 +1,18 @@
+#!/bin/sh
+set -eu
+# Wait for the USB Wi-Fi interface to appear after wpa_supplicant starts.
+for _ in $(seq 1 30); do
+    IFACE=$(/usr/sbin/iw dev 2>/dev/null | awk '/Interface/{print $2; exit}' || true)
+    if [ -n "${IFACE:-}" ]; then
+        /usr/sbin/iw dev "$IFACE" set power_save off || true
+        for dev in /sys/bus/usb/devices/*; do
+            [ -f "$dev/idVendor" ] || continue
+            if [ "$(cat "$dev/idVendor")" = "0bda" ] && [ "$(cat "$dev/idProduct")" = "c811" ]; then
+                echo on > "$dev/power/control" 2>/dev/null || true
+            fi
+        done
+        exit 0
+    fi
+    sleep 2
+done
+exit 1
