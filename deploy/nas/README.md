@@ -86,3 +86,21 @@ and runtime power saving. This modestly improves latency and receive throughput
 on the USB Wi-Fi adapter. The NAS has no built-in Ethernet and the adapter is a
 1x1 RTL8821CU; a USB 3 Ethernet adapter is the best way to significantly
 increase Time Machine throughput.
+
+## Important: HDD removal
+
+**Never unplug the USB HDD while the NAS is mounted or a backup is running.**
+The HDD is the backing device for the live ext4 filesystem and bcache cache.
+Removing it mid-write causes bcache and ext4 I/O errors.
+
+Before moving the HDD or changing USB ports:
+
+```bash
+sudo systemctl stop smbd vesper-web
+sudo umount /srv/vesper
+sudo systemctl stop vesper-bcache
+sudo poweroff
+```
+
+Power down first, move the cable, then boot and verify `/srv/vesper` is mounted
+before starting Time Machine again.
