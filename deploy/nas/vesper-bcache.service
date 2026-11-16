@@ -1,0 +1,15 @@
+[Unit]
+Description=Vesper NAS bcache writeback cache
+DefaultDependencies=no
+After=systemd-udevd.service
+Before=local-fs.target srv-vesper.mount
+Wants=systemd-udevd.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/vesper-bcache-up
+TimeoutStartSec=120
+
+[Install]
+WantedBy=sysinit.target

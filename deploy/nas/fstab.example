@@ -1,0 +1,2 @@
+# Replace the filesystem label if you change VESPER_NAS in setup-bcache.sh.
+LABEL=VESPER_NAS /srv/vesper ext4 defaults,noatime,nofail,x-systemd.requires=vesper-bcache.service,x-systemd.after=vesper-bcache.service 0 2

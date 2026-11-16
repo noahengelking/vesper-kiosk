@@ -288,3 +288,11 @@ For the dashboard backend, install `deploy/bin/vesper-display-handler` and
 `deploy/udev/99-vesper-display.rules`; the included system service example has
 the same `ExecCondition`, and the udev handler starts/stops it when a monitor
 is plugged in or removed.
+
+
+## NAS / Time Machine mode
+
+A headless machine can run Samba as a wireless Time Machine destination while
+keeping the kiosk available only when a display is attached. See
+[`deploy/nas/README.md`](deploy/nas/README.md) for the bcache-backed layout,
+Samba shares and install steps.

@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+set -euo pipefail
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+CACHE_IMG=/var/lib/vesper/bcache-cache.img
+BACKING="${VESPER_BACKING:-/dev/sda}"
+UUID_FILE=/var/lib/vesper/cache.uuid
+LOOP_FILE=/var/lib/vesper/cache.loop
+
+[ -f "$CACHE_IMG" ] || { echo "missing cache image: $CACHE_IMG" >&2; exit 1; }
+modprobe bcache
+modprobe loop
+
+LOOP=$(losetup -j "$CACHE_IMG" | awk -F: 'NR==1{print $1}')
+if [ -z "$LOOP" ]; then
+    LOOP=$(losetup --find --show "$CACHE_IMG")
+fi
+echo "$LOOP" > "$LOOP_FILE"
+
+if ! bcache-super-show "$LOOP" >/dev/null 2>&1; then
+    make-bcache -C --writeback "$LOOP" >/dev/null
+fi
+
+CACHE_UUID=$(cat "$UUID_FILE" 2>/dev/null || true)
+if [ -z "$CACHE_UUID" ]; then
+    CACHE_UUID=$(bcache-super-show "$LOOP" | awk '/cset.uuid/{print $2}' | head -1)
+    echo "$CACHE_UUID" > "$UUID_FILE"
+fi
+
+# Register cache and backing devices. Already-registered devices return an error;
+# that is harmless and expected on the second and later boots.
+echo "$LOOP" > /sys/fs/bcache/register 2>/dev/null || true
+echo "$BACKING" > /sys/fs/bcache/register 2>/dev/null || true
+
+for _ in $(seq 1 60); do
+    [ -b /dev/bcache0 ] && break
+    udevadm settle
+    sleep 1
+done
+[ -b /dev/bcache0 ] || { echo "bcache0 did not appear" >&2; exit 1; }
+
+if [ -d "/sys/fs/bcache/$CACHE_UUID" ] && [ ! -d /sys/block/bcache0/bcache/cache/cache0 ]; then
+    echo "$CACHE_UUID" > /sys/block/bcache0/bcache/attach 2>/dev/null || true
+fi
+
+echo writeback > /sys/block/bcache0/bcache/cache_mode
+[ -w /sys/block/bcache0/bcache/writeback_percent ] && echo 20 > /sys/block/bcache0/bcache/writeback_percent || true
+[ -w /sys/block/bcache0/bcache/writeback_delay ] && echo 10 > /sys/block/bcache0/bcache/writeback_delay || true
+[ -w /sys/block/bcache0/bcache/sequential_cutoff ] && echo 0 > /sys/block/bcache0/bcache/sequential_cutoff || true
+udevadm settle
+exit 0
