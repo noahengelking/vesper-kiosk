@@ -252,7 +252,7 @@ def status() -> dict:
         "services": {
             "smbd": process_running("smbd"),
             "avahi": process_running("avahi-daemon"),
-            "bcache": Path("/dev/bcache0").exists(),
+            "bcache": bcache_sysfs() is not None,
             "web": True,
         },
         "site": {
