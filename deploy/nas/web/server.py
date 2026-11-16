@@ -95,7 +95,7 @@ def disk_counters():
     try:
         for line in Path("/proc/diskstats").read_text().splitlines():
             parts = line.split()
-            if len(parts) >= 14 and parts[2] in {"sda", "bcache0", "loop0"}:
+            if len(parts) >= 14 and (parts[2] in {"sda", "loop0"} or parts[2].startswith("bcache")):
                 result[parts[2]] = {
                     "read_bytes": int(parts[5]) * 512,
                     "write_bytes": int(parts[9]) * 512,
@@ -103,6 +103,11 @@ def disk_counters():
     except OSError:
         pass
     return result
+
+
+def bcache_sysfs():
+    matches = sorted(Path("/sys/block").glob("bcache[0-9]*"))
+    return matches[0] if matches else None
 
 
 def smb_client_count() -> int:
@@ -164,18 +169,24 @@ def memory():
 
 
 def cache_state() -> dict:
-    mode = read_text("/sys/block/bcache0/bcache/cache_mode") or "unavailable"
+    base = bcache_sysfs()
+    if base is None:
+        return {"available": False, "mode": "unavailable", "state": "unknown", "dirty": 0,
+                "written": 0, "available_percent": 0, "used_percent": 0,
+                "size": CACHE_SIZE_BYTES, "hits": 0, "misses": 0, "hit_rate": None}
+    path = str(base / "bcache")
+    mode = read_text(f"{path}/cache_mode") or "unavailable"
     selected = "writeback" if "[writeback]" in mode else ("writethrough" if "[writethrough]" in mode else mode)
-    dirty = parse_size(read_text("/sys/block/bcache0/bcache/dirty_data", "0"))
-    available = read_int("/sys/block/bcache0/bcache/cache/cache_available_percent", 0)
-    written = parse_size(read_text("/sys/block/bcache0/bcache/cache/cache0/written", "0"))
-    hits = read_int("/sys/block/bcache0/bcache/stats_total/cache_hits")
-    misses = read_int("/sys/block/bcache0/bcache/stats_total/cache_misses")
+    dirty = parse_size(read_text(f"{path}/dirty_data", "0"))
+    available = read_int(f"{path}/cache/cache_available_percent", 0)
+    written = parse_size(read_text(f"{path}/cache/cache0/written", "0"))
+    hits = read_int(f"{path}/stats_total/cache_hits")
+    misses = read_int(f"{path}/stats_total/cache_misses")
     total_requests = hits + misses
     return {
-        "available": Path("/sys/block/bcache0/bcache/cache_mode").exists(),
+        "available": Path(f"{path}/cache_mode").exists(),
         "mode": selected,
-        "state": read_text("/sys/block/bcache0/bcache/state", "unknown"),
+        "state": read_text(f"{path}/state", "unknown"),
         "dirty": dirty,
         "written": written,
         "available_percent": available,
@@ -228,7 +239,7 @@ def status() -> dict:
         "root": fs_usage("/"),
         "cache": cache_state(),
         "net": {"rx": rx_rate, "tx": tx_rate},
-        "disk_io": disk_rates,
+        "disk_io": dict(disk_rates, **({"bcache": next((v for k, v in disk_rates.items() if k.startswith("bcache")), {})} if any(k.startswith("bcache") for k in disk_rates) else {})),
         "smb": {
             "clients": smb_client_count(),
             "shares": ["VesperTimeMachine", "VesperFiles"],

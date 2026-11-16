@@ -32,20 +32,24 @@ fi
 echo "$LOOP" > /sys/fs/bcache/register 2>/dev/null || true
 echo "$BACKING" > /sys/fs/bcache/register 2>/dev/null || true
 
+BCACHE_DEV=""
 for _ in $(seq 1 60); do
-    [ -b /dev/bcache0 ] && break
+    BCACHE_DEV=$(ls -d /dev/bcache[0-9]* 2>/dev/null | head -1 || true)
+    [ -n "$BCACHE_DEV" ] && [ -b "$BCACHE_DEV" ] && break
     udevadm settle
     sleep 1
 done
-[ -b /dev/bcache0 ] || { echo "bcache0 did not appear" >&2; exit 1; }
+[ -n "$BCACHE_DEV" ] && [ -b "$BCACHE_DEV" ] || { echo "bcache device did not appear" >&2; exit 1; }
+BCACHE_NAME=$(basename "$BCACHE_DEV")
+BCACHE_SYS="/sys/block/$BCACHE_NAME/bcache"
 
-if [ -d "/sys/fs/bcache/$CACHE_UUID" ] && [ ! -d /sys/block/bcache0/bcache/cache/cache0 ]; then
-    echo "$CACHE_UUID" > /sys/block/bcache0/bcache/attach 2>/dev/null || true
+if [ -d "/sys/fs/bcache/$CACHE_UUID" ] && [ ! -d "$BCACHE_SYS/cache/cache0" ]; then
+    echo "$CACHE_UUID" > "$BCACHE_SYS/attach" 2>/dev/null || true
 fi
 
-echo writeback > /sys/block/bcache0/bcache/cache_mode
-[ -w /sys/block/bcache0/bcache/writeback_percent ] && echo 20 > /sys/block/bcache0/bcache/writeback_percent || true
-[ -w /sys/block/bcache0/bcache/writeback_delay ] && echo 10 > /sys/block/bcache0/bcache/writeback_delay || true
-[ -w /sys/block/bcache0/bcache/sequential_cutoff ] && echo 0 > /sys/block/bcache0/bcache/sequential_cutoff || true
+echo writeback > "$BCACHE_SYS/cache_mode"
+[ -w "$BCACHE_SYS/writeback_percent" ] && echo 20 > "$BCACHE_SYS/writeback_percent" || true
+[ -w "$BCACHE_SYS/writeback_delay" ] && echo 10 > "$BCACHE_SYS/writeback_delay" || true
+[ -w "$BCACHE_SYS/sequential_cutoff" ] && echo 0 > "$BCACHE_SYS/sequential_cutoff" || true
 udevadm settle
 exit 0

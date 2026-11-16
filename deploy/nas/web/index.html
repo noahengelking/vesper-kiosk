@@ -152,7 +152,7 @@ async function refresh(){
     $('memTotal').textContent=fmtBytes(s.memory.total,1);
     $('memBar').style.width=Math.min(100,s.memory.percent)+'%';
     $('rootFree').textContent=fmtBytes(s.root.free,0)+' free';
-    const io=s.disk_io['bcache0']||{write:0,read:0};
+    const io=s.disk_io['bcache']||{write:0,read:0};
     $('diskWrite').textContent=fmtRate(io.write);
     $('hddWrite').textContent=s.disk_io['sda']?fmtRate(s.disk_io['sda'].write):'—';
     $('netRx').textContent=fmtRate(s.net.rx);
