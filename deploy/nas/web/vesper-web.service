@@ -1,0 +1,21 @@
+[Unit]
+Description=Vesper NAS web dashboard
+After=network-online.target srv-vesper.mount vesper-bcache.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=vesper
+Group=vesper
+WorkingDirectory=/opt/vesper-web
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/python3 /opt/vesper-web/server.py
+Restart=always
+RestartSec=2
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

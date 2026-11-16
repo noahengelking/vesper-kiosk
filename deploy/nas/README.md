@@ -63,3 +63,18 @@ sudo tmutil setdestination -a \
 Use the SMB password set with `smbpasswd -a vesper`. The share reports an
 800 GiB Time Machine quota and is advertised over Bonjour by Samba's built-in
 `fruit:time machine` support.
+
+## Browser dashboard and static websites
+
+The `web/` directory contains a small, read-only dashboard served at:
+
+```
+http://vesper.local:8088
+```
+
+It shows NAS space, bcache write-cache health, Time Machine share status, SMB
+clients, uptime, network and disk throughput. It is LAN-only and runs as the
+`vesper` user; it does not expose the kiosk's privileged control endpoints.
+
+A static site can be hosted from `VesperFiles/www`. Anything placed there is
+served at `http://vesper.local:8088/site/`.

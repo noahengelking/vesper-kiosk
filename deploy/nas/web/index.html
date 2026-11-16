@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vesper NAS</title>
+<style>
+:root{--bg:#08080a;--panel:#111114;--soft:#17171b;--fg:#e9e6df;--dim:#8a867e;--faint:#55524c;--line:#28282e;--amber:#f1b84a;--red:#d66a4b;--blue:#6e9fca;--green:#8bbf8a}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+body{overflow-x:hidden;background:radial-gradient(circle at 12% 0%,rgba(241,184,74,.10),transparent 32%),radial-gradient(circle at 90% 80%,rgba(110,159,202,.07),transparent 36%),var(--bg)}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 40%,rgba(0,0,0,.56) 100%);z-index:-1}
+.wrap{max-width:1280px;margin:0 auto;padding:38px 30px 54px}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;margin-bottom:34px}
+.kicker{font:10px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.24em;text-transform:uppercase;color:var(--amber)}
+h1{font-size:46px;font-weight:200;letter-spacing:-.045em;margin:13px 0 7px}
+.sub{font-size:14px;color:var(--dim)}
+.status{display:flex;align-items:center;gap:9px;border:1px solid var(--line);background:rgba(17,17,20,.78);border-radius:999px;padding:10px 15px;font:10px ui-monospace,Menlo,monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);white-space:nowrap}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 14px rgba(139,191,138,.7)}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+.card{border:1px solid var(--line);background:linear-gradient(145deg,rgba(23,23,27,.94),rgba(14,14,17,.92));border-radius:17px;padding:22px;min-height:150px;position:relative;overflow:hidden}
+.card:after{content:"";position:absolute;width:180px;height:180px;right:-100px;bottom:-130px;background:radial-gradient(circle,rgba(241,184,74,.12),transparent 70%);pointer-events:none}
+.card.half{grid-column:span 6}.card.third{grid-column:span 4}.card.full{grid-column:span 12}
+.label{font:9px ui-monospace,Menlo,monospace;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);margin-bottom:18px}
+.big{font-size:38px;font-weight:250;letter-spacing:-.04em}
+.mid{font-size:24px;font-weight:300;letter-spacing:-.025em}
+.mono{font:12px ui-monospace,Menlo,monospace;color:var(--dim)}
+.muted{font-size:12px;color:var(--dim)}
+.row{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding:10px 0;border-bottom:1px solid rgba(40,40,46,.65)}
+.row:last-child{border-bottom:0;padding-bottom:0}.row span:first-child{font-size:12px;color:var(--dim)}.row span:last-child{font:12px ui-monospace,Menlo,monospace;color:var(--fg);text-align:right}
+.bar{height:7px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:18px}.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--amber),#e98b48);border-radius:99px;transition:width .45s ease}
+.pills{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px}.pill{border:1px solid var(--line);border-radius:999px;padding:7px 10px;font:9px ui-monospace,Menlo,monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}.pill.good{color:var(--green);border-color:rgba(139,191,138,.26)}.pill.warn{color:var(--amber);border-color:rgba(241,184,74,.28)}.pill.bad{color:var(--red);border-color:rgba(214,106,75,.28)}
+a{color:var(--amber);text-decoration:none}a:hover{text-decoration:underline}
+.footer{display:flex;justify-content:space-between;gap:20px;margin-top:26px;font:9px ui-monospace,Menlo,monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+@media(max-width:900px){.wrap{padding:24px 18px 40px}h1{font-size:36px}.card.half,.card.third{grid-column:span 12}.top{flex-direction:column}.top .status{align-self:flex-start}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <div class="kicker">Vesper / NAS</div>
+      <h1>Home base.</h1>
+      <div class="sub" id="subtitle">Wireless storage for the quiet hours.</div>
+    </div>
+    <div class="status"><i class="dot" id="healthDot"></i><span id="healthText">Connecting…</span></div>
+  </div>
+
+  <div class="grid">
+    <section class="card half">
+      <div class="label">Network</div>
+      <div class="big" id="host">vesper.local</div>
+      <div class="mono" id="ips" style="margin-top:12px">—</div>
+      <div class="row"><span>Uptime</span><span id="uptime">—</span></div>
+      <div class="row"><span>Load</span><span id="load">—</span></div>
+      <div class="row"><span>Traffic</span><span id="traffic">—</span></div>
+    </section>
+
+    <section class="card half">
+      <div class="label">NAS storage</div>
+      <div class="big" id="storageFree">—</div>
+      <div class="sub" style="margin-top:9px"><span id="storageUsed">—</span> used of <span id="storageTotal">—</span></div>
+      <div class="bar"><i id="storageBar"></i></div>
+      <div class="pills"><span class="pill good">ext4 + bcache</span><span class="pill">/srv/vesper</span></div>
+    </section>
+
+    <section class="card half">
+      <div class="label">SSD write cache</div>
+      <div class="big"><span id="cacheDirty">—</span> <span style="font-size:16px;color:var(--dim)">dirty</span></div>
+      <div class="sub" style="margin-top:9px"><span id="cacheMode">—</span> writeback cache · <span id="cacheAvail">—</span>% available</div>
+      <div class="bar"><i id="cacheBar"></i></div>
+      <div class="row"><span>Written through cache</span><span id="cacheWritten">—</span></div>
+      <div class="row"><span>Cache hit rate</span><span id="cacheHitRate">—</span></div>
+    </section>
+
+    <section class="card half">
+      <div class="label">Time Machine</div>
+      <div class="mid">VesperTimeMachine</div>
+      <div class="muted" style="margin-top:8px">Wireless Time Machine destination for this Mac</div>
+      <div class="row"><span>Quota</span><span>800 GB</span></div>
+      <div class="row"><span>SMB clients</span><span id="smbClients">—</span></div>
+      <div class="pills"><a class="pill good" href="smb://vesper.local/VesperTimeMachine">Open in Finder</a><a class="pill" href="smb://vesper.local/VesperFiles">VesperFiles</a></div>
+    </section>
+
+    <section class="card third">
+      <div class="label">Services</div>
+      <div class="pills" id="services">—</div>
+      <div class="row" style="margin-top:18px"><span>Web access</span><span>LAN only</span></div>
+      <div class="row"><span>Dashboard</span><span>8088</span></div>
+    </section>
+
+    <section class="card third">
+      <div class="label">I/O right now</div>
+      <div class="big" id="diskWrite">—</div>
+      <div class="sub" style="margin-top:9px">NAS write throughput</div>
+      <div class="row"><span>HDD writes</span><span id="hddWrite">—</span></div>
+      <div class="row"><span>Network received</span><span id="netRx">—</span></div>
+    </section>
+
+    <section class="card third">
+      <div class="label">Memory</div>
+      <div class="big" id="memUsed">—</div>
+      <div class="sub" style="margin-top:9px">of <span id="memTotal">—</span> in use</div>
+      <div class="bar"><i id="memBar"></i></div>
+      <div class="row"><span>Root filesystem</span><span id="rootFree">— free</span></div>
+    </section>
+
+    <section class="card full" id="siteCard" style="display:none">
+      <div class="label">Hosted website</div>
+      <div class="mid">Your static site is live.</div>
+      <div class="muted" style="margin-top:8px">Drop files into <span class="mono">VesperFiles/www</span>. They appear at <a href="/site/">/site/</a>.</div>
+    </section>
+  </div>
+
+  <div class="footer"><span id="footerHost">vesper.local</span><span>Read-only NAS dashboard · auto-refresh</span></div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const fmtBytes = (n, digits=1) => {
+  if (!Number.isFinite(n)) return "—";
+  const units=["B","KB","MB","GB","TB"]; let i=0;
+  while(n>=1024 && i<units.length-1){n/=1024;i++}
+  return `${n.toFixed(i>1?digits:0)} ${units[i]}`;
+};
+const fmtRate = n => `${fmtBytes(n,1)}/s`;
+const fmtUptime = s => { s=Math.max(0,Math.floor(s)); const d=Math.floor(s/86400); s%=86400; const h=Math.floor(s/3600); s%=3600; const m=Math.floor(s/60); return d?`${d}d ${h}h`:`${h}h ${m}m`; };
+async function refresh(){
+  try {
+    const r=await fetch('/api/status',{cache:'no-store'});
+    if(!r.ok) throw new Error('status '+r.status);
+    const s=await r.json();
+    $('healthDot').style.background='var(--green)'; $('healthText').textContent='Online';
+    $('host').textContent=s.host+'.local';
+    $('subtitle').textContent=s.time_machine ? 'Wireless storage for the quiet hours.' : 'Wireless storage.';
+    $('ips').textContent=(s.ips||[]).join('  ·  ')||'—';
+    $('uptime').textContent=fmtUptime(s.uptime);
+    $('load').textContent=(s.load||[0,0,0]).map(x=>x.toFixed(2)).join(' / ');
+    $('traffic').textContent=`${fmtRate(s.net.rx)} ↓   ${fmtRate(s.net.tx)} ↑`;
+    const st=s.storage;
+    $('storageFree').textContent=fmtBytes(st.free,0)+' free';
+    $('storageUsed').textContent=fmtBytes(st.used,1);
+    $('storageTotal').textContent=fmtBytes(st.total,0);
+    $('storageBar').style.width=Math.min(100,st.percent)+'%';
+    const c=s.cache;
+    $('cacheDirty').textContent=fmtBytes(c.dirty,1);
+    $('cacheMode').textContent=c.mode;
+    $('cacheAvail').textContent=c.available_percent;
+    $('cacheBar').style.width=Math.min(100,c.used_percent)+'%';
+    $('cacheWritten').textContent=fmtBytes(c.written,1);
+    $('cacheHitRate').textContent=c.hit_rate==null?'—':c.hit_rate.toFixed(1)+'%';
+    $('smbClients').textContent=s.smb.clients;
+    $('memUsed').textContent=fmtBytes(s.memory.used,1);
+    $('memTotal').textContent=fmtBytes(s.memory.total,1);
+    $('memBar').style.width=Math.min(100,s.memory.percent)+'%';
+    $('rootFree').textContent=fmtBytes(s.root.free,0)+' free';
+    const io=s.disk_io['bcache0']||{write:0,read:0};
+    $('diskWrite').textContent=fmtRate(io.write);
+    $('hddWrite').textContent=s.disk_io['sda']?fmtRate(s.disk_io['sda'].write):'—';
+    $('netRx').textContent=fmtRate(s.net.rx);
+    const labels={smbd:'Samba',avahi:'Bonjour',bcache:'bcache',web:'Web'};
+    $('services').innerHTML=Object.entries(s.services).map(([k,v])=>`<span class="pill ${v?'good':'bad'}">${v?'●':'○'} ${labels[k]||k}</span>`).join('');
+    $('siteCard').style.display=s.site.available?'block':'none';
+    $('footerHost').textContent=s.host+'.local · '+s.now;
+  } catch(e) {
+    $('healthDot').style.background='var(--red)'; $('healthText').textContent='Offline';
+  }
+}
+refresh(); setInterval(refresh, 2500);
+</script>
+</body>
+</html>
